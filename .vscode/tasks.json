@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "cargo",
+      "subcommand": "build",
+      "problemMatcher": ["$rustc"],
+      "group": {
+        "isDefault": true,
+        "kind": "build"
+      },
+      "label": "Rust: cargo build - wgpu"
+    },
+    {
+      "type": "cargo",
+      "subcommand": "run",
+      "problemMatcher": ["$rustc"],
+      "group": {
+        "isDefault": true,
+        "kind": "test"
+      },
+      "label": "Rust: cargo build - wgpu"
+    }
+  ]
+}
