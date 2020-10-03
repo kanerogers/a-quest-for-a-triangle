@@ -6,9 +6,9 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
-enum ColourDirection {
-    Forward,
-    Backward,
+enum CurrentShader {
+    Boring,
+    Positional,
 }
 
 struct State {
@@ -20,7 +20,7 @@ struct State {
     size: winit::dpi::PhysicalSize<u32>,
     colour: wgpu::Color,
     render_pipeline: wgpu::RenderPipeline,
-    colour_direction: ColourDirection,
+    current_shader: CurrentShader,
 }
 
 impl State {
@@ -63,49 +63,7 @@ impl State {
 
         let vs_module = device.create_shader_module(wgpu::include_spirv!("shader.vert.spv"));
         let fs_module = device.create_shader_module(wgpu::include_spirv!("shader.frag.spv"));
-
-        let render_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: None,
-                push_constant_ranges: &[],
-                bind_group_layouts: &[],
-            });
-
-        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Render Pipeline"),
-            layout: Some(&render_pipeline_layout),
-            vertex_stage: wgpu::ProgrammableStageDescriptor {
-                module: &vs_module,
-                entry_point: "main",
-            },
-            fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
-                module: &fs_module,
-                entry_point: "main",
-            }),
-            rasterization_state: Some(wgpu::RasterizationStateDescriptor {
-                front_face: wgpu::FrontFace::Ccw,
-                cull_mode: wgpu::CullMode::Back,
-                depth_bias: 0,
-                depth_bias_slope_scale: 0.0,
-                depth_bias_clamp: 0.0,
-                clamp_depth: false,
-            }),
-            color_states: &[wgpu::ColorStateDescriptor {
-                format: sc_desc.format,
-                color_blend: wgpu::BlendDescriptor::REPLACE,
-                alpha_blend: wgpu::BlendDescriptor::REPLACE,
-                write_mask: wgpu::ColorWrite::ALL,
-            }],
-            primitive_topology: wgpu::PrimitiveTopology::TriangleList,
-            depth_stencil_state: None,
-            vertex_state: wgpu::VertexStateDescriptor {
-                index_format: wgpu::IndexFormat::Uint16,
-                vertex_buffers: &[],
-            },
-            sample_count: 1,
-            sample_mask: !0,
-            alpha_to_coverage_enabled: false,
-        });
+        let render_pipeline = create_pipeline(&device, &sc_desc, vs_module, fs_module);
 
         Self {
             surface,
@@ -120,8 +78,8 @@ impl State {
                 b: 0.3,
                 a: 1.0,
             },
+            current_shader: CurrentShader::Boring,
             render_pipeline,
-            colour_direction: ColourDirection::Forward,
         }
     }
     fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
@@ -131,16 +89,20 @@ impl State {
         self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
     }
 
-    fn input(&mut self, _event: &WindowEvent) -> bool {
-        // match event {
-        //     WindowEvent::CursorMoved { position, .. } => {
-        //         self.colour.r = position.x / self.size.width as f64;
-        //         self.colour.b = position.y / self.size.height as f64;
-        //         self.colour.g = (self.colour.r + self.colour.b) / 2.0;
-        //         return true;
-        //     }
-        //     _ => {}
-        // }
+    fn input(&mut self, event: &WindowEvent) -> bool {
+        match event {
+            WindowEvent::KeyboardInput { input, .. } => match input {
+                KeyboardInput {
+                    state: ElementState::Pressed,
+                    virtual_keycode: Some(VirtualKeyCode::Space),
+                    ..
+                } => {
+                    self.switch_pipelines();
+                }
+                _ => {}
+            },
+            _ => {}
+        }
 
         return false;
     }
@@ -155,8 +117,6 @@ impl State {
             .get_current_frame()
             .expect("Timeout getting texture")
             .output;
-
-        self.update_colour();
 
         let mut encoder = self
             .device
@@ -183,39 +143,31 @@ impl State {
         self.queue.submit(once(encoder.finish()));
     }
 
-    fn update_colour(&mut self) {
-        if self.colour.r >= 1.0 && self.colour.g >= 1.0 && self.colour.b >= 1.0 {
-            self.colour_direction = ColourDirection::Backward;
-        }
-
-        if self.colour.r <= 0.0 && self.colour.g <= 0.0 && self.colour.b <= 0.0 {
-            self.colour_direction = ColourDirection::Forward;
-        }
-
-        match self.colour_direction {
-            ColourDirection::Forward => {
-                if self.colour.r < 1.0 {
-                    self.colour.r += 0.01;
-                } else {
-                    if self.colour.g < 1.0 {
-                        self.colour.g += 0.01;
-                    } else {
-                        self.colour.b += 0.01;
-                    }
-                }
+    fn switch_pipelines(&mut self) {
+        let (vs_module, fs_module) = match self.current_shader {
+            CurrentShader::Boring => {
+                self.current_shader = CurrentShader::Positional;
+                let vs_module = self
+                    .device
+                    .create_shader_module(wgpu::include_spirv!("positional.vert.spv"));
+                let fs_module = self
+                    .device
+                    .create_shader_module(wgpu::include_spirv!("positional.frag.spv"));
+                (vs_module, fs_module)
             }
-            ColourDirection::Backward => {
-                if self.colour.b > 0.0 {
-                    self.colour.b -= 0.01;
-                } else {
-                    if self.colour.g > 0.0 {
-                        self.colour.g -= 0.01;
-                    } else {
-                        self.colour.r -= 0.01;
-                    }
-                }
+            CurrentShader::Positional => {
+                self.current_shader = CurrentShader::Boring;
+                let vs_module = self
+                    .device
+                    .create_shader_module(wgpu::include_spirv!("shader.vert.spv"));
+                let fs_module = self
+                    .device
+                    .create_shader_module(wgpu::include_spirv!("shader.frag.spv"));
+                (vs_module, fs_module)
             }
-        }
+        };
+
+        self.render_pipeline = create_pipeline(&self.device, &self.sc_desc, vs_module, fs_module);
     }
 }
 
@@ -258,4 +210,53 @@ fn main() {
         }
         _ => {}
     });
+}
+
+fn create_pipeline(
+    device: &wgpu::Device,
+    sc_desc: &wgpu::SwapChainDescriptor,
+    vs_module: wgpu::ShaderModule,
+    fs_module: wgpu::ShaderModule,
+) -> wgpu::RenderPipeline {
+    let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: None,
+        push_constant_ranges: &[],
+        bind_group_layouts: &[],
+    });
+
+    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: Some("Render Pipeline"),
+        layout: Some(&render_pipeline_layout),
+        vertex_stage: wgpu::ProgrammableStageDescriptor {
+            module: &vs_module,
+            entry_point: "main",
+        },
+        fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
+            module: &fs_module,
+            entry_point: "main",
+        }),
+        rasterization_state: Some(wgpu::RasterizationStateDescriptor {
+            front_face: wgpu::FrontFace::Ccw,
+            cull_mode: wgpu::CullMode::Back,
+            depth_bias: 0,
+            depth_bias_slope_scale: 0.0,
+            depth_bias_clamp: 0.0,
+            clamp_depth: false,
+        }),
+        color_states: &[wgpu::ColorStateDescriptor {
+            format: sc_desc.format,
+            color_blend: wgpu::BlendDescriptor::REPLACE,
+            alpha_blend: wgpu::BlendDescriptor::REPLACE,
+            write_mask: wgpu::ColorWrite::ALL,
+        }],
+        primitive_topology: wgpu::PrimitiveTopology::TriangleList,
+        depth_stencil_state: None,
+        vertex_state: wgpu::VertexStateDescriptor {
+            index_format: wgpu::IndexFormat::Uint16,
+            vertex_buffers: &[],
+        },
+        sample_count: 1,
+        sample_mask: !0,
+        alpha_to_coverage_enabled: false,
+    })
 }
