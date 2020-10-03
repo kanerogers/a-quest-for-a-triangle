@@ -6,6 +6,11 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
+enum ColourDirection {
+    Forward,
+    Backward,
+}
+
 struct State {
     surface: wgpu::Surface,
     device: wgpu::Device,
@@ -15,6 +20,7 @@ struct State {
     size: winit::dpi::PhysicalSize<u32>,
     colour: wgpu::Color,
     render_pipeline: wgpu::RenderPipeline,
+    colour_direction: ColourDirection,
 }
 
 impl State {
@@ -55,33 +61,8 @@ impl State {
         };
         let swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
-        let vs_src = include_str!("shader.vert");
-        let fs_src = include_str!("shader.frag");
-        let mut compiler = shaderc::Compiler::new().unwrap();
-        let vs_spirv = compiler
-            .compile_into_spirv(
-                vs_src,
-                shaderc::ShaderKind::Vertex,
-                "shader.vert",
-                "main",
-                None,
-            )
-            .unwrap();
-
-        let fs_spirv = compiler
-            .compile_into_spirv(
-                fs_src,
-                shaderc::ShaderKind::Fragment,
-                "shader.frag",
-                "main",
-                None,
-            )
-            .unwrap();
-
-        let vs_module =
-            device.create_shader_module(wgpu::util::make_spirv(&vs_spirv.as_binary_u8()));
-        let fs_module =
-            device.create_shader_module(wgpu::util::make_spirv(&fs_spirv.as_binary_u8()));
+        let vs_module = device.create_shader_module(wgpu::include_spirv!("shader.vert.spv"));
+        let fs_module = device.create_shader_module(wgpu::include_spirv!("shader.frag.spv"));
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -140,6 +121,7 @@ impl State {
                 a: 1.0,
             },
             render_pipeline,
+            colour_direction: ColourDirection::Forward,
         }
     }
     fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
@@ -174,6 +156,8 @@ impl State {
             .expect("Timeout getting texture")
             .output;
 
+        self.update_colour();
+
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -200,18 +184,35 @@ impl State {
     }
 
     fn update_colour(&mut self) {
-        if self.colour.r <= 1.0 {
-            self.colour.r += 0.01;
-        } else {
-            if self.colour.g <= 1.0 {
-                self.colour.g += 0.01;
-            } else {
-                if self.colour.b <= 1.0 {
-                    self.colour.b += 0.01;
+        if self.colour.r >= 1.0 && self.colour.g >= 1.0 && self.colour.b >= 1.0 {
+            self.colour_direction = ColourDirection::Backward;
+        }
+
+        if self.colour.r <= 0.0 && self.colour.g <= 0.0 && self.colour.b <= 0.0 {
+            self.colour_direction = ColourDirection::Forward;
+        }
+
+        match self.colour_direction {
+            ColourDirection::Forward => {
+                if self.colour.r < 1.0 {
+                    self.colour.r += 0.01;
                 } else {
-                    self.colour.r = 0.0;
-                    self.colour.g = 0.0;
-                    self.colour.b = 0.0;
+                    if self.colour.g < 1.0 {
+                        self.colour.g += 0.01;
+                    } else {
+                        self.colour.b += 0.01;
+                    }
+                }
+            }
+            ColourDirection::Backward => {
+                if self.colour.b > 0.0 {
+                    self.colour.b -= 0.01;
+                } else {
+                    if self.colour.g > 0.0 {
+                        self.colour.g -= 0.01;
+                    } else {
+                        self.colour.r -= 0.01;
+                    }
                 }
             }
         }
