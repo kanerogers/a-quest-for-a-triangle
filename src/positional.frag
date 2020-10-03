@@ -1,7 +1,8 @@
 #version 450
 
 layout(location=0) out vec4 f_color;
+layout(location=0) in vec4 triangle_colour;
 
 void main() {
-    f_color = vec4(0.1, 0.2, 0.5, 1.0);
+    f_color = triangle_colour;
 }
