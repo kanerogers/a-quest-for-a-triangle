@@ -1,5 +1,6 @@
 use futures::executor::block_on;
 use std::iter::once;
+use wgpu::util::DeviceExt;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -21,7 +22,33 @@ struct State {
     colour: wgpu::Color,
     render_pipeline: wgpu::RenderPipeline,
     current_shader: CurrentShader,
+    vertex_buffer: wgpu::Buffer,
 }
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+struct Vertex {
+    position: [f32; 3],
+    color: [f32; 3],
+}
+
+unsafe impl bytemuck::Pod for Vertex {}
+unsafe impl bytemuck::Zeroable for Vertex {}
+
+const VERTICIES: &[Vertex] = &[
+    Vertex {
+        position: [0.0, 0.5, 0.0],
+        color: [1.0, 0.0, 0.0],
+    },
+    Vertex {
+        position: [-0.5, -0.5, 0.0],
+        color: [0.0, 1.0, 0.0],
+    },
+    Vertex {
+        position: [0.5, -0.5, 0.0],
+        color: [0.0, 0.0, 1.0],
+    },
+];
 
 impl State {
     // Creating some of the wgpu types requires async code
@@ -64,6 +91,11 @@ impl State {
         let vs_module = device.create_shader_module(wgpu::include_spirv!("shader.vert.spv"));
         let fs_module = device.create_shader_module(wgpu::include_spirv!("shader.frag.spv"));
         let render_pipeline = create_pipeline(&device, &sc_desc, vs_module, fs_module);
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Vertex Buffer"),
+            contents: bytemuck::cast_slice(VERTICIES),
+            usage: wgpu::BufferUsage::VERTEX,
+        });
 
         Self {
             surface,
@@ -80,6 +112,7 @@ impl State {
             },
             current_shader: CurrentShader::Boring,
             render_pipeline,
+            vertex_buffer,
         }
     }
     fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
