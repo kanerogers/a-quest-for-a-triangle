@@ -1,23 +1,29 @@
 [package]
-name = "learn_wgpu"
-version = "0.1.0"
 authors = ["Kane Rogers <kane.m.rogers@gmail.com>"]
 edition = "2018"
+name = "a_quest_for_triangle"
+version = "0.1.0"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["lib", "cdylib"]
 
 [dependencies]
-image = "0.23"
-winit = "0.22"
-cgmath = "0.17"
 env_logger = "0.7"
-log = "0.4"
 futures = "0.3"
-wgpu ="0.6"
-bytemuck = "1.4"
+jni = "0.17"
+log = "0.4"
+ovr-mobile-sys = {path = "../ovr-mobile-sys"}
+wgpu = "0.6"
 
-[build-dependencies]
-anyhow = "1.0"
-fs_extra = "1.1"
-glob = "0.3"
-shaderc = "0.6"
+[package.metadata.android]
+fullscreen = true
+target_sdk_version = 26
+
+[[package.metadata.android.activity_metadatas]]
+name = "com.oculus.vr.focusaware"
+value = "true"
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.17"
+ndk = "0.2.1"
+ndk-glue = "0.2.1"
