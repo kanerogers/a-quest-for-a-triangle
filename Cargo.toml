@@ -11,18 +11,23 @@ crate-type = ["lib", "cdylib"]
 egli = "0.5"
 env_logger = "0.7"
 futures = "0.3"
+gl = "0.14"
 jni = "0.17"
 log = "0.4"
 ovr-mobile-sys = {path = "../ovr-mobile-sys"}
 wgpu = "0.6"
 
 [package.metadata.android]
+apk_label = "A Quest for a Triangle"
 fullscreen = true
 target_sdk_version = 26
 
-[[package.metadata.android.activity_metadatas]]
-name = "com.oculus.vr.focusaware"
-value = "true"
+[[package.metadata.android.permission]]
+name = "android.permission.ACCESS_NETWORK_STATE"
+
+# [[package.metadata.android.activity_metadatas]]
+# name = "com.oculus.vr.focusaware"
+# value = "true"
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.17"
