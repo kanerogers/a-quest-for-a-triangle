@@ -8,7 +8,7 @@ dependencies = [
  "futures",
  "jni",
  "log",
- "ndk",
+ "ndk 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ndk-glue",
  "ovr-mobile-sys",
  "wgpu",
@@ -754,7 +754,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5eb167c1febed0a496639034d0c76b3b74263636045db5489eee52143c246e73"
 dependencies = [
  "jni-sys",
- "ndk-sys",
+ "ndk-sys 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num_enum",
+ "thiserror",
+]
+
+[[package]]
+name = "ndk"
+version = "0.2.1"
+source = "git+https://github.com/MarijnS95/android-ndk-rs?branch=poll-use-identifier#c9074f3953c56760d170a3ef64a36d5f3e6696e8"
+dependencies = [
+ "jni-sys",
+ "ndk-sys 0.2.1 (git+https://github.com/MarijnS95/android-ndk-rs?branch=poll-use-identifier)",
  "num_enum",
  "thiserror",
 ]
@@ -762,22 +773,20 @@ dependencies = [
 [[package]]
 name = "ndk-glue"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdf399b8b7a39c6fb153c4ec32c72fd5fe789df24a647f229c239aa7adb15241"
+source = "git+https://github.com/MarijnS95/android-ndk-rs?branch=poll-use-identifier#c9074f3953c56760d170a3ef64a36d5f3e6696e8"
 dependencies = [
  "lazy_static",
  "libc",
  "log",
- "ndk",
+ "ndk 0.2.1 (git+https://github.com/MarijnS95/android-ndk-rs?branch=poll-use-identifier)",
  "ndk-macro",
- "ndk-sys",
+ "ndk-sys 0.2.1 (git+https://github.com/MarijnS95/android-ndk-rs?branch=poll-use-identifier)",
 ]
 
 [[package]]
 name = "ndk-macro"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05d1c6307dc424d0f65b9b06e94f88248e6305726b14729fd67a5e47b2dc481d"
+source = "git+https://github.com/MarijnS95/android-ndk-rs?branch=poll-use-identifier#c9074f3953c56760d170a3ef64a36d5f3e6696e8"
 dependencies = [
  "darling",
  "proc-macro-crate",
@@ -791,6 +800,11 @@ name = "ndk-sys"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c44922cb3dbb1c70b5e5f443d63b64363a898564d739ba5198e3a9138442868d"
+
+[[package]]
+name = "ndk-sys"
+version = "0.2.1"
+source = "git+https://github.com/MarijnS95/android-ndk-rs?branch=poll-use-identifier#c9074f3953c56760d170a3ef64a36d5f3e6696e8"
 
 [[package]]
 name = "num-traits"

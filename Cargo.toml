@@ -26,4 +26,4 @@ value = "true"
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.17"
 ndk = "0.2.1"
-ndk-glue = "0.2.1"
+ndk-glue = {git = "https://github.com/MarijnS95/android-ndk-rs", branch = "poll-use-identifier"}
