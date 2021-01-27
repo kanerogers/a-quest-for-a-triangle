@@ -4,6 +4,7 @@
 name = "a_quest_for_triangle"
 version = "0.1.0"
 dependencies = [
+ "egli",
  "env_logger",
  "futures",
  "jni",
@@ -270,6 +271,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "egli"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8713355fe0618276bb5a225b115335bca1bfe0848f71fcb7eb27fa0c971bb378"
+dependencies = [
+ "bitflags",
+ "libc",
 ]
 
 [[package]]

@@ -1,16 +1,22 @@
+mod glwrapper;
+
+#[allow(non_snake_case)]
 #[cfg(target_os = "android")]
 mod lib {
+    use crate::glwrapper::GLWrapper;
     use ndk::looper::{Poll, ThreadLooper};
-    use ovr_mobile_sys::ovrStructureType_::VRAPI_STRUCTURE_TYPE_INIT_PARMS;
-    use ovr_mobile_sys::vrapi_Initialize;
+    use ovr_mobile_sys::ovrStructureType_::{
+        VRAPI_STRUCTURE_TYPE_INIT_PARMS, VRAPI_STRUCTURE_TYPE_MODE_PARMS,
+    };
     use ovr_mobile_sys::VRAPI_PRODUCT_VERSION;
     use ovr_mobile_sys::{ovrGraphicsAPI_, ovrInitParms};
-    use ovr_mobile_sys::{ovrJava, ovrMobile};
+    use ovr_mobile_sys::{ovrJava, ovrMobile, ovrModeFlags, ovrModeParms};
+    use ovr_mobile_sys::{vrapi_EnterVrMode, vrapi_Initialize};
     use ovr_mobile_sys::{VRAPI_MAJOR_VERSION, VRAPI_MINOR_VERSION, VRAPI_PATCH_VERSION};
     use std::time::Duration;
 
     pub const LOOPER_ID_MAIN: u32 = 0;
-    pub const LOOPER_ID_INPUT: u32 = 0;
+    pub const LOOPER_ID_INPUT: u32 = 1;
     pub const LOOPER_TIMEOUT: Duration = Duration::from_millis(0u64);
 
     struct App {
@@ -18,6 +24,53 @@ mod lib {
         ovrMobile: Option<ovrMobile>,
         destroyRequested: bool,
         resumed: bool,
+        window_created: bool,
+        gl: GLWrapper,
+    }
+
+    impl App {
+        fn handle_event(&mut self, event: ndk_glue::Event) -> () {
+            println!("Received event: {:?}", event);
+            match event {
+                ndk_glue::Event::Resume => self.resumed = true,
+                ndk_glue::Event::Destroy => self.destroyRequested = true,
+                ndk_glue::Event::WindowCreated => self.window_created = true,
+                ndk_glue::Event::WindowDestroyed => self.window_created = false,
+                ndk_glue::Event::Pause => self.resumed = false,
+                _ => {}
+            }
+
+            self.next_state();
+        }
+
+        fn next_state(&mut self) {
+            if self.need_to_enter_vr() {
+                self.enter_vr();
+            }
+        }
+
+        fn need_to_enter_vr(&self) -> bool {
+            self.resumed && self.window_created && self.ovrMobile.is_none()
+        }
+
+        fn enter_vr(&self) {
+            let flags = 0u32 | ovrModeFlags::VRAPI_MODE_FLAG_NATIVE_WINDOW as u32;
+            let ovrModeParms = ovrModeParms {
+                Type: VRAPI_STRUCTURE_TYPE_MODE_PARMS,
+                Flags: flags,
+                Java: self.java.clone(),
+                WindowSurface: ndk_glue::native_window().as_ref().unwrap().ptr().as_ptr() as u64,
+                Display: 0,
+                ShareContext: 0,
+            };
+
+            println!("Entering VR Mode..");
+            let ovrMobile = unsafe { vrapi_EnterVrMode(&ovrModeParms) };
+            println!(
+                "Probably not actually in vr mode. Here was the response: {:?}",
+                ovrMobile
+            );
+        }
     }
 
     pub fn poll_all_ms(block: bool) -> Option<ndk_glue::Event> {
@@ -43,7 +96,10 @@ mod lib {
                     }
                     None
                 } else {
-                    unreachable!("Unrecognised looper identifier: {:?}", ident);
+                    unreachable!(
+                        "Unrecognised looper identifier: {:?} but LOOPER_ID_INPUT is {:?}",
+                        ident, LOOPER_ID_INPUT
+                    );
                 }
             }
             _ => None,
@@ -64,7 +120,7 @@ mod lib {
             ActivityObject: native_activity.activity(),
         };
 
-        let mut parms: ovrInitParms = ovrInitParms {
+        let parms: ovrInitParms = ovrInitParms {
             Type: VRAPI_STRUCTURE_TYPE_INIT_PARMS,
             ProductVersion: VRAPI_PRODUCT_VERSION as i32,
             MajorVersion: VRAPI_MAJOR_VERSION as i32,
@@ -83,15 +139,19 @@ mod lib {
             ovrMobile: None,
             destroyRequested: false,
             resumed: false,
+            window_created: false,
+            gl: GLWrapper::new(),
         };
 
-        while (!app.destroyRequested) {
+        while !app.destroyRequested {
             loop {
                 match poll_all_ms(false) {
-                    Some(event) => println!("got an event: {:?}", event),
-                    _ => {}
+                    Some(event) => app.handle_event(event),
+                    _ => break,
                 }
             }
         }
+
+        println!("Destroy requested! Bye for now!");
     }
 }

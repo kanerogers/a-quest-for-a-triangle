@@ -8,6 +8,7 @@ version = "0.1.0"
 crate-type = ["lib", "cdylib"]
 
 [dependencies]
+egli = "0.5"
 env_logger = "0.7"
 futures = "0.3"
 jni = "0.17"
