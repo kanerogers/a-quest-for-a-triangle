@@ -14,7 +14,7 @@ futures = "0.3"
 gl = "0.14"
 jni = "0.17"
 log = "0.4"
-ovr-mobile-sys = {path = "../ovr-mobile-sys"}
+ovr-mobile-sys = {git = "https://github.com/kanerogers/ovr-mobile-sys"}
 wgpu = "0.6"
 
 [package.metadata.android]

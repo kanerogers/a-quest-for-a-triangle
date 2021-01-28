@@ -909,6 +909,7 @@ checksum = "260e51e7efe62b592207e9e13a68e43692a7a279171d6ba57abd208bf23645ad"
 [[package]]
 name = "ovr-mobile-sys"
 version = "0.4.0"
+source = "git+https://github.com/kanerogers/ovr-mobile-sys#ebd989d1825a7e9ccece4e01adb46c801999d5f2"
 dependencies = [
  "jni-sys",
 ]
