@@ -5,6 +5,10 @@ mod glwrapper;
 mod lib {
     use crate::glwrapper::GLWrapper;
     use ndk::looper::{Poll, ThreadLooper};
+    use ovr_mobile_sys::helpers::{
+        ovrMatrix4f_TanAngleMatrixFromProjection, vrapi_DefaultLayerLoadingIcon2,
+        vrapi_DefaultLayerProjection2,
+    };
     use ovr_mobile_sys::ovrStructureType_::{
         VRAPI_STRUCTURE_TYPE_INIT_PARMS, VRAPI_STRUCTURE_TYPE_MODE_PARMS,
     };
@@ -12,12 +16,17 @@ mod lib {
         VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH,
     };
     use ovr_mobile_sys::ovrTextureType_::VRAPI_TEXTURE_TYPE_2D;
+    use ovr_mobile_sys::vrapi_GetTextureSwapChainLength;
     use ovr_mobile_sys::VRAPI_PRODUCT_VERSION;
     use ovr_mobile_sys::{ovrGraphicsAPI_, ovrInitParms};
-    use ovr_mobile_sys::{ovrJava, ovrMobile, ovrModeFlags, ovrModeParms, ovrTextureSwapChain};
     use ovr_mobile_sys::{
-        vrapi_CreateTextureSwapChain3, vrapi_EnterVrMode, vrapi_GetSystemPropertyInt,
-        vrapi_Initialize,
+        ovrJava, ovrLayerHeader2, ovrMobile, ovrModeFlags, ovrModeParms,
+        ovrSubmitFrameDescription2_, ovrTextureSwapChain,
+    };
+    use ovr_mobile_sys::{
+        vrapi_CreateTextureSwapChain3, vrapi_EnterVrMode, vrapi_GetPredictedDisplayTime,
+        vrapi_GetPredictedTracking2, vrapi_GetSystemPropertyInt, vrapi_GetTextureSwapChainHandle,
+        vrapi_Initialize, vrapi_SubmitFrame2,
     };
     use ovr_mobile_sys::{VRAPI_MAJOR_VERSION, VRAPI_MINOR_VERSION, VRAPI_PATCH_VERSION};
     use std::time::Duration;
@@ -33,7 +42,7 @@ mod lib {
         resumed: bool,
         window_created: bool,
         gl: GLWrapper,
-        frame_index: u64,
+        frame_index: i64,
         color_texture_swap_chain: [*mut ovrTextureSwapChain; 2],
     }
 
@@ -53,17 +62,19 @@ mod lib {
         }
 
         fn next_state(&mut self) {
+            // if self.need_to_exit_vr() {
+            //     self.exit_vr();
+            // }
+
             if self.need_to_enter_vr() {
                 self.enter_vr();
             }
 
             if self.should_render() {
-                self.render();
+                unsafe {
+                    self.render();
+                }
             }
-
-            // if self.need_to_exit_vr() {
-            //     self.exit_vr();
-            // }
         }
 
         fn need_to_enter_vr(&self) -> bool {
@@ -88,7 +99,58 @@ mod lib {
             self.ovrMobile = Some(ovrMobile);
         }
 
-        fn render(&mut self) {}
+        fn should_render(&self) -> bool {
+            self.resumed && self.window_created && self.ovrMobile.is_some()
+        }
+
+        unsafe fn render(&mut self) {
+            // Get the HMD pose, predicted for the middle of the time period during which
+            // the new eye images will be displayed. The number of frames predicted ahead
+            // depends on the pipeline depth of the engine and the synthesis rate.
+            // The better the prediction, the less black will be pulled in at the edges.
+            let predicted_display_Time =
+                vrapi_GetPredictedDisplayTime(*self.ovrMobile.as_ref().unwrap(), self.frame_index);
+            let tracking = vrapi_GetPredictedTracking2(
+                *self.ovrMobile.as_ref().unwrap(),
+                predicted_display_Time,
+            );
+
+            // Advance the simulation based on the predicted display time.
+
+            // Render eye images and setup the 'ovrSubmitFrameDescription2' using 'ovrTracking2' data.
+
+            let mut layer = vrapi_DefaultLayerLoadingIcon2();
+            // layer.HeadPose = tracking.HeadPose;
+            // for eye in 0..2 {
+            //     let colorTextureSwapChainIndex = self.frame_index as i32
+            //         % vrapi_GetTextureSwapChainLength(self.color_texture_swap_chain[eye]);
+            //     let textureId = vrapi_GetTextureSwapChainHandle(
+            //         self.color_texture_swap_chain[eye],
+            //         colorTextureSwapChainIndex,
+            //     );
+            //     //     // Render to 'textureId' using the 'ProjectionMatrix' from 'ovrTracking2'.
+
+            //     layer.Textures[eye].ColorSwapChain = self.color_texture_swap_chain[eye];
+            //     layer.Textures[eye].SwapChainIndex = colorTextureSwapChainIndex;
+            //     layer.Textures[eye].TexCoordsFromTanAngles =
+            //         ovrMatrix4f_TanAngleMatrixFromProjection(&tracking.Eye[eye].ProjectionMatrix);
+            // }
+
+            let layers = [&layer.Header as *const ovrLayerHeader2];
+
+            let frameDesc = ovrSubmitFrameDescription2_ {
+                Flags: 0,
+                SwapInterval: 1,
+                FrameIndex: self.frame_index as u64,
+                Pad: unsafe { std::mem::zeroed() },
+                DisplayTime: predicted_display_Time,
+                LayerCount: 1,
+                Layers: layers.as_ptr(),
+            };
+
+            // Hand over the eye images to the time warp.
+            vrapi_SubmitFrame2(*self.ovrMobile.as_ref().unwrap(), &frameDesc);
+        }
     }
 
     pub fn poll_all_ms(block: bool) -> Option<ndk_glue::Event> {

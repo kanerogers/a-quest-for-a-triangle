@@ -1,4 +1,4 @@
-use egli::{egl, Context, Display, SurfaceType};
+use egli::{egl, Display, SurfaceType};
 use gl;
 use std::mem;
 
