@@ -1,12 +1,14 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+use crate::colour_swap_chain::ColourSwapChain;
 use ash::{
     extensions::khr,
     extensions::ext,
     version::{DeviceV1_0, EntryV1_0, InstanceV1_0},
     vk, Device, Entry, Instance,
 };
+use ovr_mobile_sys::ovrJava;
 use std::{ffi:: { CStr, CString}};
 use byte_slice_cast::AsSliceOf;
 
@@ -87,18 +89,26 @@ pub struct VulkanRenderer {
 }
 
 impl VulkanRenderer {
-    pub fn new() -> VulkanRenderer {
+    pub fn new(java: &ovrJava) -> VulkanRenderer {
         let (instance, entry, debug_utils, debug_messenger) = unsafe { Self::init_vulkan() };
         let (physical_device, indices) = pick_physical_device(&instance, &entry);
         let (device, graphics_queue, present_queue) =
             unsafe { create_logical_device(&instance, physical_device, indices.clone()) };
-        let (swap_chain_ext, swap_chain, format, extent) = create_swap_chain(&instance, &entry, physical_device, &device);
+
+        // Swap Chain - potentially handled by ovr stuff?
+        let (swap_chain_ext, swap_chain, format, extent) = create_swap_chain(&instance, &entry, physical_device, &device, java);
         let mut swap_chain_images = get_swap_chain_images(&instance, &device, swap_chain);
         let swap_chain_image_views = create_image_views(&mut swap_chain_images, format, &device);
+
+        // Render Pass
         let render_pass = create_render_pass(format, &device);
         let (pipeline_layout, pipeline) = create_graphics_pipeline(&device, extent, render_pass);
+
+        // Frame Buffer
         let swap_chain_framebuffers = create_framebuffers(&swap_chain_image_views, &device, render_pass, extent);
         let command_pool = create_command_pool(indices.clone(), &device);
+
+        // Command Buffer
         let command_buffers = create_command_buffers(&device, &swap_chain_framebuffers, command_pool, render_pass, extent, pipeline);
         let (image_available, render_finished, in_flight_fences, images_in_flight) = create_sync_objects(&device, swap_chain_image_views.len());
         let surface_loader = khr::Surface::new(&entry, &instance);
@@ -572,8 +582,11 @@ fn create_swap_chain (
     instance: &Instance,
     entry: &Entry,
     physical_device: vk::PhysicalDevice,
-    logical_device: &Device) -> (khr::Swapchain, vk::SwapchainKHR, vk::Format, vk::Extent2D) {
-        todo!()
+    logical_device: &Device,
+    java: &ovrJava,
+) -> (khr::Swapchain, vk::SwapchainKHR, vk::Format, vk::Extent2D) {
+        let colour_swap_chain = unsafe { ColourSwapChain::init(java) };
+        todo!();
 }
 
 fn get_format() -> vk::Format {

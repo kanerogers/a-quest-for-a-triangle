@@ -1,4 +1,5 @@
 mod app;
+mod colour_swap_chain;
 mod vulkan_renderer;
 
 #[allow(non_snake_case)]
@@ -39,7 +40,7 @@ mod lib {
         println!("[INIT] vrapi_Initialize Result: {:?}", initOvrResult);
 
         // Create Vulkan Context.
-        let vulkan_context = VulkanRenderer::new();
+        let vulkan_context = VulkanRenderer::new(&java);
 
         let initVulkanResult = init_vulkan(&vulkan_context);
 
