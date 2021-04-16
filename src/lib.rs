@@ -1,10 +1,9 @@
 mod app;
-mod glwrapper;
+mod vulkan_wrapper;
 
 #[allow(non_snake_case)]
 mod lib {
     use crate::app::App;
-    use crate::glwrapper::GLWrapper;
 
     use ndk::looper::{Poll, ThreadLooper};
     use ovr_mobile_sys::{
@@ -50,7 +49,7 @@ mod lib {
             destroy_requested: false,
             resumed: false,
             window_created: false,
-            gl: GLWrapper::new(),
+            gl: unimplemented!(),
             frame_index: 1,
             color_texture_swap_chain,
         };
@@ -72,33 +71,35 @@ mod lib {
     fn get_swap_chain(
         java: ovr_mobile_sys::ovrJava_,
     ) -> [*mut ovr_mobile_sys::ovrTextureSwapChain; 2] {
-        let suggested_eye_texture_width = unsafe {
-            vrapi_GetSystemPropertyInt(&java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH)
-        };
-        let suggested_eye_texture_height = unsafe {
-            vrapi_GetSystemPropertyInt(&java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT)
-        };
-        let color_texture_swap_chain = unsafe {
-            [
-                vrapi_CreateTextureSwapChain3(
-                    VRAPI_TEXTURE_TYPE_2D,
-                    gl::RGBA8.into(),
-                    suggested_eye_texture_width,
-                    suggested_eye_texture_height,
-                    1,
-                    3,
-                ),
-                vrapi_CreateTextureSwapChain3(
-                    VRAPI_TEXTURE_TYPE_2D,
-                    gl::RGBA8.into(),
-                    suggested_eye_texture_width,
-                    suggested_eye_texture_height,
-                    1,
-                    3,
-                ),
-            ]
-        };
-        color_texture_swap_chain
+        unimplemented!()
+
+        // let suggested_eye_texture_width = unsafe {
+        //     vrapi_GetSystemPropertyInt(&java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH)
+        // };
+        // let suggested_eye_texture_height = unsafe {
+        //     vrapi_GetSystemPropertyInt(&java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT)
+        // };
+        // let color_texture_swap_chain = unsafe {
+        //     [
+        //         vrapi_CreateTextureSwapChain3(
+        //             VRAPI_TEXTURE_TYPE_2D,
+        //             gl::RGBA8.into(),
+        //             suggested_eye_texture_width,
+        //             suggested_eye_texture_height,
+        //             1,
+        //             3,
+        //         ),
+        //         vrapi_CreateTextureSwapChain3(
+        //             VRAPI_TEXTURE_TYPE_2D,
+        //             gl::RGBA8.into(),
+        //             suggested_eye_texture_width,
+        //             suggested_eye_texture_height,
+        //             1,
+        //             3,
+        //         ),
+        //     ]
+        // };
+        // color_texture_swap_chain
     }
 
     fn init_ovr(java: ovr_mobile_sys::ovrJava_) -> ovr_mobile_sys::ovrInitializeStatus_ {

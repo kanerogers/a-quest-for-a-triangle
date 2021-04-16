@@ -1,4 +1,3 @@
-use crate::glwrapper::GLWrapper;
 use ovr_mobile_sys::{
     helpers::vrapi_DefaultLayerLoadingIcon2, ovrJava, ovrLayerHeader2, ovrMobile, ovrModeFlags,
     ovrModeParms, ovrStructureType_::VRAPI_STRUCTURE_TYPE_MODE_PARMS, ovrSubmitFrameDescription2_,
@@ -12,9 +11,10 @@ pub struct App {
     pub destroy_requested: bool,
     pub resumed: bool,
     pub window_created: bool,
-    pub gl: GLWrapper,
     pub frame_index: i64,
     pub color_texture_swap_chain: [*mut ovrTextureSwapChain; 2],
+    pub device: Device,
+    pub context: Context,
 }
 
 impl App {
