@@ -4,17 +4,14 @@ mod vulkan_wrapper;
 #[allow(non_snake_case)]
 mod lib {
     use crate::app::App;
+    use crate::vulkan_wrapper::VulkanContext;
 
     use ndk::looper::{Poll, ThreadLooper};
     use ovr_mobile_sys::{
-        ovrGraphicsAPI_, ovrInitParms, ovrJava,
-        ovrStructureType_::VRAPI_STRUCTURE_TYPE_INIT_PARMS,
-        ovrSystemProperty_::{
-            VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH,
-        },
-        ovrTextureType_::VRAPI_TEXTURE_TYPE_2D,
-        vrapi_CreateTextureSwapChain3, vrapi_GetSystemPropertyInt, vrapi_Initialize,
-        VRAPI_MAJOR_VERSION, VRAPI_MINOR_VERSION, VRAPI_PATCH_VERSION, VRAPI_PRODUCT_VERSION,
+        ovrGraphicsAPI_, ovrInitParms, ovrJava, ovrResult,
+        ovrStructureType_::VRAPI_STRUCTURE_TYPE_INIT_PARMS, ovrSystemCreateInfoVulkan,
+        vrapi_CreateSystemVulkan, vrapi_Initialize, VRAPI_MAJOR_VERSION, VRAPI_MINOR_VERSION,
+        VRAPI_PATCH_VERSION, VRAPI_PRODUCT_VERSION,
     };
 
     use std::time::Duration;
@@ -38,8 +35,13 @@ mod lib {
             ActivityObject: native_activity.activity(),
         };
 
-        let result = init_ovr(java);
-        println!("[INIT] vrapi_Initialize Result: {:?}", result);
+        let initOvrResult = init_ovr(java);
+        println!("[INIT] vrapi_Initialize Result: {:?}", initOvrResult);
+
+        // Create Vulkan Context.
+        let vulkan_context = VulkanContext::new();
+
+        let initVulkanResult = init_vulkan(&vulkan_context);
 
         let color_texture_swap_chain = get_swap_chain(java);
 
@@ -49,7 +51,7 @@ mod lib {
             destroy_requested: false,
             resumed: false,
             window_created: false,
-            gl: unimplemented!(),
+            vulkan_context,
             frame_index: 1,
             color_texture_swap_chain,
         };
@@ -66,6 +68,15 @@ mod lib {
         }
 
         println!("Destroy requested! Bye for now!");
+    }
+
+    fn init_vulkan(vulkan_context: &VulkanContext) -> ovrResult {
+        let system_info = ovrSystemCreateInfoVulkan {
+            Instance: unimplemented!(),
+            Device: unimplemented!(),
+            PhysicalDevice: unimplemented!(),
+        };
+        unsafe { vrapi_CreateSystemVulkan(&mut system_info) }
     }
 
     fn get_swap_chain(
@@ -109,7 +120,7 @@ mod lib {
             MajorVersion: VRAPI_MAJOR_VERSION as i32,
             MinorVersion: VRAPI_MINOR_VERSION as i32,
             PatchVersion: VRAPI_PATCH_VERSION as i32,
-            GraphicsAPI: ovrGraphicsAPI_::VRAPI_GRAPHICS_API_OPENGL_ES_2,
+            GraphicsAPI: ovrGraphicsAPI_::VRAPI_GRAPHICS_API_VULKAN_1,
             Java: java,
         };
         println!("[INIT] Initialising vrapi");

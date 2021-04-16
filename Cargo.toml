@@ -14,7 +14,8 @@ env_logger = "0.7"
 futures = "0.3"
 jni = "0.17"
 log = "0.4"
-ovr-mobile-sys = {git = "https://github.com/kanerogers/ovr-mobile-sys"}
+#ovr-mobile-sys = {git = "https://github.com/kanerogers/ovr-mobile-sys"}
+ovr-mobile-sys = {path = "../ovr-mobile-sys"}
 wgpu = "0.6"
 
 [package.metadata.android]

@@ -5,6 +5,8 @@ use ovr_mobile_sys::{
     vrapi_GetPredictedTracking2, vrapi_SubmitFrame2,
 };
 
+use crate::vulkan_wrapper::VulkanContext;
+
 pub struct App {
     pub java: ovrJava,
     pub ovr_mobile: Option<*mut ovrMobile>,
@@ -13,8 +15,7 @@ pub struct App {
     pub window_created: bool,
     pub frame_index: i64,
     pub color_texture_swap_chain: [*mut ovrTextureSwapChain; 2],
-    pub device: Device,
-    pub context: Context,
+    pub vulkan_context: VulkanContext,
 }
 
 impl App {
@@ -59,8 +60,8 @@ impl App {
             Flags: flags,
             Java: self.java.clone(),
             WindowSurface: ndk_glue::native_window().as_ref().unwrap().ptr().as_ptr() as u64,
-            Display: self.gl.display as u64,
-            ShareContext: self.gl.context as u64,
+            Display: unimplemented!(),
+            ShareContext: unimplemented!(),
         };
 
         println!("[ENTER_VR] Entering VR Mode..");
