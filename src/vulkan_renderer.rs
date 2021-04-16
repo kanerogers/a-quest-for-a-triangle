@@ -7,7 +7,7 @@ use ash::{
     version::{DeviceV1_0, EntryV1_0, InstanceV1_0},
     vk, Device, Entry, Instance,
 };
-use std::{cmp, ffi:: { CStr, CString}};
+use std::{ffi:: { CStr, CString}};
 use byte_slice_cast::AsSliceOf;
 
 const MAX_FRAMES_IN_FLIGHT:usize = 2;
@@ -58,7 +58,7 @@ impl QueueFamilyIndices {
     }
 }
 
-pub struct VulkanContext {
+pub struct VulkanRenderer {
     _entry: Entry,
     instance: Instance,
     debug_utils: Option<ext::DebugUtils>,
@@ -86,8 +86,8 @@ pub struct VulkanContext {
     current_frame: usize,
 }
 
-impl VulkanContext {
-    pub fn new() -> VulkanContext {
+impl VulkanRenderer {
+    pub fn new() -> VulkanRenderer {
         let (instance, entry, debug_utils, debug_messenger) = unsafe { Self::init_vulkan() };
         let (physical_device, indices) = pick_physical_device(&instance, &entry);
         let (device, graphics_queue, present_queue) =
@@ -103,7 +103,7 @@ impl VulkanContext {
         let (image_available, render_finished, in_flight_fences, images_in_flight) = create_sync_objects(&device, swap_chain_image_views.len());
         let surface_loader = khr::Surface::new(&entry, &instance);
 
-        VulkanContext {
+        VulkanRenderer {
             instance,
             _entry: entry,
             debug_utils,
@@ -221,7 +221,7 @@ impl VulkanContext {
     }
 }
 
-impl Drop for VulkanContext {
+impl Drop for VulkanRenderer {
     fn drop(&mut self) {
         unsafe {
             for semaphore in self.render_finished_semaphores.drain(..) {

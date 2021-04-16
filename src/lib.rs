@@ -1,10 +1,10 @@
 mod app;
-mod vulkan_wrapper;
+mod vulkan_renderer;
 
 #[allow(non_snake_case)]
 mod lib {
     use crate::app::App;
-    use crate::vulkan_wrapper::VulkanContext;
+    use crate::vulkan_renderer::VulkanRenderer;
 
     use ndk::looper::{Poll, ThreadLooper};
     use ovr_mobile_sys::{
@@ -39,7 +39,7 @@ mod lib {
         println!("[INIT] vrapi_Initialize Result: {:?}", initOvrResult);
 
         // Create Vulkan Context.
-        let vulkan_context = VulkanContext::new();
+        let vulkan_context = VulkanRenderer::new();
 
         let initVulkanResult = init_vulkan(&vulkan_context);
 
@@ -70,11 +70,11 @@ mod lib {
         println!("Destroy requested! Bye for now!");
     }
 
-    fn init_vulkan(vulkan_context: &VulkanContext) -> ovrResult {
+    fn init_vulkan(vulkan_renderer: &VulkanRenderer) -> ovrResult {
         let system_info = ovrSystemCreateInfoVulkan {
-            Instance: unimplemented!(),
-            Device: unimplemented!(),
-            PhysicalDevice: unimplemented!(),
+            Instance: todo!(),
+            Device: todo!(),
+            PhysicalDevice: todo!(),
         };
         unsafe { vrapi_CreateSystemVulkan(&mut system_info) }
     }

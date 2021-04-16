@@ -5,7 +5,7 @@ use ovr_mobile_sys::{
     vrapi_GetPredictedTracking2, vrapi_SubmitFrame2,
 };
 
-use crate::vulkan_wrapper::VulkanContext;
+use crate::vulkan_renderer::VulkanRenderer;
 
 pub struct App {
     pub java: ovrJava,
@@ -15,7 +15,7 @@ pub struct App {
     pub window_created: bool,
     pub frame_index: i64,
     pub color_texture_swap_chain: [*mut ovrTextureSwapChain; 2],
-    pub vulkan_context: VulkanContext,
+    pub vulkan_context: VulkanRenderer,
 }
 
 impl App {
