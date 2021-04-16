@@ -39,48 +39,10 @@ mod lib {
             ActivityObject: native_activity.activity(),
         };
 
-        let parms: ovrInitParms = ovrInitParms {
-            Type: VRAPI_STRUCTURE_TYPE_INIT_PARMS,
-            ProductVersion: VRAPI_PRODUCT_VERSION as i32,
-            MajorVersion: VRAPI_MAJOR_VERSION as i32,
-            MinorVersion: VRAPI_MINOR_VERSION as i32,
-            PatchVersion: VRAPI_PATCH_VERSION as i32,
-            GraphicsAPI: ovrGraphicsAPI_::VRAPI_GRAPHICS_API_OPENGL_ES_2,
-            Java: java,
-        };
-
-        println!("[INIT] Initialising vrapi");
-
-        let result = unsafe { vrapi_Initialize(&parms) };
-
+        let result = init_ovr(java);
         println!("[INIT] vrapi_Initialize Result: {:?}", result);
-        let suggested_eye_texture_width = unsafe {
-            vrapi_GetSystemPropertyInt(&java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH)
-        };
-        let suggested_eye_texture_height = unsafe {
-            vrapi_GetSystemPropertyInt(&java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT)
-        };
 
-        let color_texture_swap_chain = unsafe {
-            [
-                vrapi_CreateTextureSwapChain3(
-                    VRAPI_TEXTURE_TYPE_2D,
-                    gl::RGBA8.into(),
-                    suggested_eye_texture_width,
-                    suggested_eye_texture_height,
-                    1,
-                    3,
-                ),
-                vrapi_CreateTextureSwapChain3(
-                    VRAPI_TEXTURE_TYPE_2D,
-                    gl::RGBA8.into(),
-                    suggested_eye_texture_width,
-                    suggested_eye_texture_height,
-                    1,
-                    3,
-                ),
-            ]
-        };
+        let color_texture_swap_chain = get_swap_chain(java);
 
         let mut app = App {
             java,
@@ -105,6 +67,53 @@ mod lib {
         }
 
         println!("Destroy requested! Bye for now!");
+    }
+
+    fn get_swap_chain(
+        java: ovr_mobile_sys::ovrJava_,
+    ) -> [*mut ovr_mobile_sys::ovrTextureSwapChain; 2] {
+        let suggested_eye_texture_width = unsafe {
+            vrapi_GetSystemPropertyInt(&java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH)
+        };
+        let suggested_eye_texture_height = unsafe {
+            vrapi_GetSystemPropertyInt(&java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT)
+        };
+        let color_texture_swap_chain = unsafe {
+            [
+                vrapi_CreateTextureSwapChain3(
+                    VRAPI_TEXTURE_TYPE_2D,
+                    gl::RGBA8.into(),
+                    suggested_eye_texture_width,
+                    suggested_eye_texture_height,
+                    1,
+                    3,
+                ),
+                vrapi_CreateTextureSwapChain3(
+                    VRAPI_TEXTURE_TYPE_2D,
+                    gl::RGBA8.into(),
+                    suggested_eye_texture_width,
+                    suggested_eye_texture_height,
+                    1,
+                    3,
+                ),
+            ]
+        };
+        color_texture_swap_chain
+    }
+
+    fn init_ovr(java: ovr_mobile_sys::ovrJava_) -> ovr_mobile_sys::ovrInitializeStatus_ {
+        let parms: ovrInitParms = ovrInitParms {
+            Type: VRAPI_STRUCTURE_TYPE_INIT_PARMS,
+            ProductVersion: VRAPI_PRODUCT_VERSION as i32,
+            MajorVersion: VRAPI_MAJOR_VERSION as i32,
+            MinorVersion: VRAPI_MINOR_VERSION as i32,
+            PatchVersion: VRAPI_PATCH_VERSION as i32,
+            GraphicsAPI: ovrGraphicsAPI_::VRAPI_GRAPHICS_API_OPENGL_ES_2,
+            Java: java,
+        };
+        println!("[INIT] Initialising vrapi");
+        let result = unsafe { vrapi_Initialize(&parms) };
+        result
     }
 
     pub fn poll_all_ms(block: bool) -> Option<ndk_glue::Event> {
