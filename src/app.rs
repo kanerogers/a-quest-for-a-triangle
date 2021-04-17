@@ -1,8 +1,8 @@
 use ovr_mobile_sys::{
     helpers::vrapi_DefaultLayerLoadingIcon2, ovrJava, ovrLayerHeader2, ovrMobile, ovrModeFlags,
     ovrModeParms, ovrStructureType_::VRAPI_STRUCTURE_TYPE_MODE_PARMS, ovrSubmitFrameDescription2_,
-    ovrTextureSwapChain, vrapi_EnterVrMode, vrapi_GetPredictedDisplayTime,
-    vrapi_GetPredictedTracking2, vrapi_SubmitFrame2,
+    vrapi_EnterVrMode, vrapi_GetPredictedDisplayTime, vrapi_GetPredictedTracking2,
+    vrapi_SubmitFrame2,
 };
 
 use crate::vulkan_renderer::VulkanRenderer;
@@ -14,8 +14,7 @@ pub struct App {
     pub resumed: bool,
     pub window_created: bool,
     pub frame_index: i64,
-    pub color_texture_swap_chain: [*mut ovrTextureSwapChain; 2],
-    pub vulkan_context: VulkanRenderer,
+    pub renderer: VulkanRenderer,
 }
 
 impl App {

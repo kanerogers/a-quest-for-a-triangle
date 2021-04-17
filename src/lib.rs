@@ -44,17 +44,14 @@ mod lib {
 
         let initVulkanResult = init_vulkan(&vulkan_context);
 
-        let color_texture_swap_chain = get_swap_chain(java);
-
         let mut app = App {
             java,
             ovr_mobile: None,
             destroy_requested: false,
             resumed: false,
             window_created: false,
-            vulkan_context,
+            renderer: vulkan_context,
             frame_index: 1,
-            color_texture_swap_chain,
         };
 
         println!("[INIT] Beginning loop..");
@@ -78,40 +75,6 @@ mod lib {
             PhysicalDevice: todo!(),
         };
         unsafe { vrapi_CreateSystemVulkan(&mut system_info) }
-    }
-
-    fn get_swap_chain(
-        java: ovr_mobile_sys::ovrJava_,
-    ) -> [*mut ovr_mobile_sys::ovrTextureSwapChain; 2] {
-        unimplemented!()
-
-        // let suggested_eye_texture_width = unsafe {
-        //     vrapi_GetSystemPropertyInt(&java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH)
-        // };
-        // let suggested_eye_texture_height = unsafe {
-        //     vrapi_GetSystemPropertyInt(&java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT)
-        // };
-        // let color_texture_swap_chain = unsafe {
-        //     [
-        //         vrapi_CreateTextureSwapChain3(
-        //             VRAPI_TEXTURE_TYPE_2D,
-        //             gl::RGBA8.into(),
-        //             suggested_eye_texture_width,
-        //             suggested_eye_texture_height,
-        //             1,
-        //             3,
-        //         ),
-        //         vrapi_CreateTextureSwapChain3(
-        //             VRAPI_TEXTURE_TYPE_2D,
-        //             gl::RGBA8.into(),
-        //             suggested_eye_texture_width,
-        //             suggested_eye_texture_height,
-        //             1,
-        //             3,
-        //         ),
-        //     ]
-        // };
-        // color_texture_swap_chain
     }
 
     fn init_ovr(java: ovr_mobile_sys::ovrJava_) -> ovr_mobile_sys::ovrInitializeStatus_ {
