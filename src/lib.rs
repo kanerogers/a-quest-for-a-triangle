@@ -1,5 +1,6 @@
 mod app;
 mod colour_swap_chain;
+mod debug_messenger;
 mod eye_command_buffer;
 mod frame_buffer;
 mod old_vulkan;
