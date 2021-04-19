@@ -1,13 +1,14 @@
+use crate::physical_device::get_physical_device;
 use std::ffi::{CStr, CString};
 
 use ash::{
-    extensions::ext,
     version::{EntryV1_0, InstanceV1_0},
     vk::{self, Handle},
     Entry, Instance,
 };
 use ovr_mobile_sys::{
     ovrMatrix4f, ovrSystemCreateInfoVulkan, vrapi_CreateSystemVulkan, VkInstance_T,
+    VkPhysicalDevice_T,
 };
 
 use crate::{
@@ -35,20 +36,20 @@ impl VulkanRenderer {
         projection_matrix: Vec<ovrMatrix4f>,
         num_eyes: usize,
     ) -> Self {
-        let instance = create_instance();
+        let (instance, entry) = vulkan_init();
         let vk_instance = instance.handle().as_raw();
-        let PhysicalDevice = get_physical_device();
-        let Device = get_device();
+        let physical_device = get_physical_device(&instance, &entry);
+        let vk_physical_device = physical_device.as_raw();
+        let device = get_device();
+        let vk_device = todo!();
 
         let mut system_info = ovrSystemCreateInfoVulkan {
             Instance: vk_instance as *mut VkInstance_T,
-            PhysicalDevice,
-            Device,
+            PhysicalDevice: vk_physical_device as *mut VkPhysicalDevice_T,
+            Device: vk_device,
         };
 
-        unsafe {
-            vrapi_CreateSystemVulkan(&mut system_info);
-        }
+        vrapi_CreateSystemVulkan(&mut system_info);
 
         Self {
             render_pass_single_view,
@@ -61,15 +62,11 @@ impl VulkanRenderer {
     }
 }
 
-fn get_physical_device() -> *mut ovr_mobile_sys::VkPhysicalDevice_T {
-    todo!()
-}
-
 fn get_device() -> *mut ovr_mobile_sys::VkDevice_T {
     todo!()
 }
 
-unsafe fn create_instance() -> Instance {
+unsafe fn vulkan_init() -> (Instance, Entry) {
     let app_name = CString::new("Hello Triangle").unwrap();
     let entry = Entry::new().unwrap();
     let layer_names = get_layer_names(&entry);
@@ -90,7 +87,7 @@ unsafe fn create_instance() -> Instance {
 
     let (debug_utils, messenger) = setup_debug_messenger(&entry, &instance, &debug_messenger_info);
 
-    instance
+    (instance, entry)
 }
 
 fn get_layer_names(entry: &Entry) -> Vec<*const u8> {
