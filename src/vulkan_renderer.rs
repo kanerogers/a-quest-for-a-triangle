@@ -4,8 +4,8 @@ use ash::{
     Entry, Instance,
 };
 use ovr_mobile_sys::{
-    ovrMatrix4f, ovrSystemCreateInfoVulkan, vrapi_CreateSystemVulkan, VkDevice_T, VkInstance_T,
-    VkPhysicalDevice_T,
+    ovrJava, ovrMatrix4f, ovrSystemCreateInfoVulkan, vrapi_CreateSystemVulkan, VkDevice_T,
+    VkInstance_T, VkPhysicalDevice_T,
 };
 use std::ffi::{CStr, CString};
 
@@ -19,23 +19,16 @@ use crate::{
 };
 
 pub struct VulkanRenderer {
-    pub render_pass_single_view: RenderPass,
-    pub eye_command_buffers: Vec<EyeCommandBuffer>,
-    pub frame_buffers: Vec<FrameBuffer>,
-    pub view_matrix: Vec<ovrMatrix4f>,
-    pub projection_matrix: Vec<ovrMatrix4f>,
-    pub num_eyes: usize,
+    // pub render_pass_single_view: RenderPass,
+// pub eye_command_buffers: Vec<EyeCommandBuffer>,
+// pub frame_buffers: Vec<FrameBuffer>,
+// pub view_matrix: Vec<ovrMatrix4f>,
+// pub projection_matrix: Vec<ovrMatrix4f>,
+// pub num_eyes: usize,
 }
 
 impl VulkanRenderer {
-    pub unsafe fn new(
-        render_pass_single_view: RenderPass,
-        eye_command_buffers: Vec<EyeCommandBuffer>,
-        frame_buffers: Vec<FrameBuffer>,
-        view_matrix: Vec<ovrMatrix4f>,
-        projection_matrix: Vec<ovrMatrix4f>,
-        num_eyes: usize,
-    ) -> Self {
+    pub unsafe fn new(java: &ovrJava) -> Self {
         let (instance, entry) = vulkan_init();
         let vk_instance = instance.handle().as_raw();
         let (physical_device, queue_family_indices) = get_physical_device(&instance, &entry);
@@ -53,12 +46,12 @@ impl VulkanRenderer {
         vrapi_CreateSystemVulkan(&mut system_info);
 
         Self {
-            render_pass_single_view,
-            eye_command_buffers,
-            frame_buffers,
-            view_matrix,
-            projection_matrix,
-            num_eyes,
+            // render_pass_single_view,
+            // eye_command_buffers,
+            // frame_buffers,
+            // view_matrix,
+            // projection_matrix,
+            // num_eyes,
         }
     }
 }
@@ -104,6 +97,10 @@ fn get_layer_names(entry: &Entry) -> Vec<*const u8> {
         .iter()
         .map(|l| unsafe { CStr::from_ptr(l.layer_name.as_ptr()) })
         .collect::<Vec<_>>();
+
+    for supported_layer in &supported_layers {
+        println!("Supported layer: {:?}", supported_layer);
+    }
 
     for layer in validation_layers {
         assert!(

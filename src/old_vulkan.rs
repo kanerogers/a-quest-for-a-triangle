@@ -60,7 +60,7 @@ impl QueueFamilyIndices {
     }
 }
 
-pub struct VulkanRenderer {
+pub struct OldVulkanRenderer {
     _entry: Entry,
     instance: Instance,
     debug_utils: Option<ext::DebugUtils>,
@@ -88,8 +88,8 @@ pub struct VulkanRenderer {
     current_frame: usize,
 }
 
-impl VulkanRenderer {
-    pub fn new(java: &ovrJava) -> VulkanRenderer {
+impl OldVulkanRenderer {
+    pub fn new(java: &ovrJava) -> OldVulkanRenderer {
         let (instance, entry, debug_utils, debug_messenger) = unsafe { Self::init_vulkan() };
         let (physical_device, indices) = pick_physical_device(&instance, &entry);
         let (device, graphics_queue, present_queue) =
@@ -113,7 +113,7 @@ impl VulkanRenderer {
         let (image_available, render_finished, in_flight_fences, images_in_flight) = create_sync_objects(&device, swap_chain_image_views.len());
         let surface_loader = khr::Surface::new(&entry, &instance);
 
-        VulkanRenderer {
+        OldVulkanRenderer {
             instance,
             _entry: entry,
             debug_utils,
@@ -231,7 +231,7 @@ impl VulkanRenderer {
     }
 }
 
-impl Drop for VulkanRenderer {
+impl Drop for OldVulkanRenderer {
     fn drop(&mut self) {
         unsafe {
             for semaphore in self.render_finished_semaphores.drain(..) {

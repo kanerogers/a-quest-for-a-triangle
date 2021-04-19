@@ -1,6 +1,8 @@
 [package]
 authors = ["Kane Rogers <kane.m.rogers@gmail.com>"]
+build = "build.rs"
 edition = "2018"
+links = "VkLayer_core_validation"
 name = "a_quest_for_triangle"
 version = "0.1.0"
 
@@ -16,7 +18,6 @@ jni = "0.17"
 log = "0.4"
 #ovr-mobile-sys = {git = "https://github.com/kanerogers/ovr-mobile-sys"}
 ovr-mobile-sys = {path = "../ovr-mobile-sys"}
-wgpu = "0.6"
 
 [package.metadata.android]
 apk_label = "A Quest for a Triangle"

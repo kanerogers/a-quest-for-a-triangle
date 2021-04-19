@@ -12,14 +12,13 @@ mod render_pass;
 mod vulkan_renderer;
 
 mod lib {
-    use crate::app::App;
-    use crate::old_vulkan::VulkanRenderer;
+    use crate::{app::App, vulkan_renderer::VulkanRenderer};
 
     use ndk::looper::{Poll, ThreadLooper};
     use ovr_mobile_sys::{
-        ovrGraphicsAPI_, ovrInitParms, ovrJava, ovrStructureType_::VRAPI_STRUCTURE_TYPE_INIT_PARMS,
-        vrapi_Initialize, VRAPI_MAJOR_VERSION, VRAPI_MINOR_VERSION, VRAPI_PATCH_VERSION,
-        VRAPI_PRODUCT_VERSION,
+        ovrGraphicsAPI_, ovrInitParms, ovrJava, ovrJava_,
+        ovrStructureType_::VRAPI_STRUCTURE_TYPE_INIT_PARMS, vrapi_Initialize, VRAPI_MAJOR_VERSION,
+        VRAPI_MINOR_VERSION, VRAPI_PATCH_VERSION, VRAPI_PRODUCT_VERSION,
     };
 
     use std::time::Duration;
@@ -37,7 +36,7 @@ mod lib {
         let vm: jni::JavaVM = unsafe { jni::JavaVM::from_raw(vm_ptr) }.unwrap();
         let env = vm.attach_current_thread_permanently().unwrap();
 
-        let java: ovr_mobile_sys::ovrJava_ = ovrJava {
+        let java = ovrJava {
             Vm: vm.get_java_vm_pointer(),
             Env: env.get_native_interface(),
             ActivityObject: native_activity.activity(),
@@ -47,7 +46,7 @@ mod lib {
         println!("[INIT] vrapi_Initialize Result: {:?}", init_ovr_result);
 
         // Create Vulkan Renderer
-        let renderer = VulkanRenderer::new(&java);
+        let renderer = unsafe { VulkanRenderer::new(&java) };
 
         let mut app = App {
             java,
@@ -73,7 +72,7 @@ mod lib {
         println!("Destroy requested! Bye for now!");
     }
 
-    fn init_ovr(java: ovr_mobile_sys::ovrJava_) -> ovr_mobile_sys::ovrInitializeStatus_ {
+    fn init_ovr(java: ovrJava_) -> ovr_mobile_sys::ovrInitializeStatus_ {
         let parms: ovrInitParms = ovrInitParms {
             Type: VRAPI_STRUCTURE_TYPE_INIT_PARMS,
             ProductVersion: VRAPI_PRODUCT_VERSION as i32,

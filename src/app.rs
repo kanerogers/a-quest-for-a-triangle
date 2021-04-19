@@ -5,8 +5,7 @@ use ovr_mobile_sys::{
     vrapi_SubmitFrame2,
 };
 
-use crate::old_vulkan::VulkanRenderer;
-
+use crate::vulkan_renderer::VulkanRenderer;
 pub struct App {
     pub java: ovrJava,
     pub ovr_mobile: Option<*mut ovrMobile>,
@@ -59,8 +58,8 @@ impl App {
             Flags: flags,
             Java: self.java.clone(),
             WindowSurface: ndk_glue::native_window().as_ref().unwrap().ptr().as_ptr() as u64,
-            Display: unimplemented!(),
-            ShareContext: unimplemented!(),
+            Display: todo!(),
+            ShareContext: todo!(),
         };
 
         println!("[ENTER_VR] Entering VR Mode..");
