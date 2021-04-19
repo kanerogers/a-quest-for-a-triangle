@@ -5,7 +5,7 @@ use ovr_mobile_sys::{
     vrapi_SubmitFrame2,
 };
 
-use crate::vulkan_renderer::VulkanRenderer;
+use crate::old_vulkan::VulkanRenderer;
 
 pub struct App {
     pub java: ovrJava,

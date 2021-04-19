@@ -1,12 +1,15 @@
 mod app;
 mod colour_swap_chain;
+mod eye_command_buffer;
+mod frame_buffer;
+mod old_vulkan;
 mod render_pass;
 mod vulkan_renderer;
 
 #[allow(non_snake_case)]
 mod lib {
     use crate::app::App;
-    use crate::vulkan_renderer::VulkanRenderer;
+    use crate::old_vulkan::VulkanRenderer;
 
     use ndk::looper::{Poll, ThreadLooper};
     use ovr_mobile_sys::{
