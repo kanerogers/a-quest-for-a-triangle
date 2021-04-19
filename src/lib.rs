@@ -13,10 +13,9 @@ mod lib {
 
     use ndk::looper::{Poll, ThreadLooper};
     use ovr_mobile_sys::{
-        ovrGraphicsAPI_, ovrInitParms, ovrJava, ovrResult,
-        ovrStructureType_::VRAPI_STRUCTURE_TYPE_INIT_PARMS, ovrSystemCreateInfoVulkan,
-        vrapi_CreateSystemVulkan, vrapi_Initialize, VRAPI_MAJOR_VERSION, VRAPI_MINOR_VERSION,
-        VRAPI_PATCH_VERSION, VRAPI_PRODUCT_VERSION,
+        ovrGraphicsAPI_, ovrInitParms, ovrJava, ovrStructureType_::VRAPI_STRUCTURE_TYPE_INIT_PARMS,
+        vrapi_Initialize, VRAPI_MAJOR_VERSION, VRAPI_MINOR_VERSION, VRAPI_PATCH_VERSION,
+        VRAPI_PRODUCT_VERSION,
     };
 
     use std::time::Duration;
@@ -40,13 +39,11 @@ mod lib {
             ActivityObject: native_activity.activity(),
         };
 
-        let initOvrResult = init_ovr(java);
-        println!("[INIT] vrapi_Initialize Result: {:?}", initOvrResult);
+        let init_ovr_result = init_ovr(java);
+        println!("[INIT] vrapi_Initialize Result: {:?}", init_ovr_result);
 
-        // Create Vulkan Context.
+        // Create Vulkan Renderer
         let renderer = VulkanRenderer::new(&java);
-
-        let init_vulkan_result = init_vulkan(&renderer);
 
         let mut app = App {
             java,
@@ -70,15 +67,6 @@ mod lib {
         }
 
         println!("Destroy requested! Bye for now!");
-    }
-
-    fn init_vulkan(vulkan_renderer: &VulkanRenderer) -> ovrResult {
-        let system_info = ovrSystemCreateInfoVulkan {
-            Instance: todo!(),
-            Device: todo!(),
-            PhysicalDevice: todo!(),
-        };
-        unsafe { vrapi_CreateSystemVulkan(&mut system_info) }
     }
 
     fn init_ovr(java: ovr_mobile_sys::ovrJava_) -> ovr_mobile_sys::ovrInitializeStatus_ {
