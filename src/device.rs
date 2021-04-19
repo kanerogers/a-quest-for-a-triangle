@@ -9,7 +9,7 @@ use crate::queue_family_indices::QueueFamilyIndices;
 pub unsafe fn create_logical_device<'a>(
     instance: &Instance,
     physical_device: vk::PhysicalDevice,
-    indices: QueueFamilyIndices,
+    indices: &QueueFamilyIndices,
 ) -> (Device, vk::Queue, vk::Queue) {
     // TODO: Portability
     // let extensions = portability_extensions();

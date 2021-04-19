@@ -2,7 +2,10 @@ use crate::queue_family_indices::QueueFamilyIndices;
 use ash::{version::InstanceV1_0, vk, Entry, Instance};
 use std::ffi::CStr;
 
-pub fn get_physical_device(instance: &Instance, entry: &Entry) -> vk::PhysicalDevice {
+pub fn get_physical_device(
+    instance: &Instance,
+    entry: &Entry,
+) -> (vk::PhysicalDevice, QueueFamilyIndices) {
     unsafe {
         let devices = instance.enumerate_physical_devices().unwrap();
         let mut devices = devices
@@ -12,7 +15,7 @@ pub fn get_physical_device(instance: &Instance, entry: &Entry) -> vk::PhysicalDe
         devices.sort_by_key(|i| i.0);
 
         let (_, indices, device) = devices.remove(0);
-        device
+        (device, indices)
     }
 }
 

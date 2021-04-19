@@ -1,20 +1,20 @@
-use crate::physical_device::get_physical_device;
-use std::ffi::{CStr, CString};
-
 use ash::{
     version::{EntryV1_0, InstanceV1_0},
     vk::{self, Handle},
     Entry, Instance,
 };
 use ovr_mobile_sys::{
-    ovrMatrix4f, ovrSystemCreateInfoVulkan, vrapi_CreateSystemVulkan, VkInstance_T,
+    ovrMatrix4f, ovrSystemCreateInfoVulkan, vrapi_CreateSystemVulkan, VkDevice_T, VkInstance_T,
     VkPhysicalDevice_T,
 };
+use std::ffi::{CStr, CString};
 
 use crate::{
     debug_messenger::{get_debug_messenger_create_info, setup_debug_messenger},
+    device::create_logical_device,
     eye_command_buffer::EyeCommandBuffer,
     frame_buffer::FrameBuffer,
+    physical_device::get_physical_device,
     render_pass::RenderPass,
 };
 
@@ -38,15 +38,16 @@ impl VulkanRenderer {
     ) -> Self {
         let (instance, entry) = vulkan_init();
         let vk_instance = instance.handle().as_raw();
-        let physical_device = get_physical_device(&instance, &entry);
+        let (physical_device, queue_family_indices) = get_physical_device(&instance, &entry);
         let vk_physical_device = physical_device.as_raw();
-        let device = get_device();
-        let vk_device = todo!();
+        let (device, _, _) =
+            create_logical_device(&instance, physical_device, &queue_family_indices);
+        let vk_device = device.handle().as_raw();
 
         let mut system_info = ovrSystemCreateInfoVulkan {
             Instance: vk_instance as *mut VkInstance_T,
             PhysicalDevice: vk_physical_device as *mut VkPhysicalDevice_T,
-            Device: vk_device,
+            Device: vk_device as *mut VkDevice_T,
         };
 
         vrapi_CreateSystemVulkan(&mut system_info);
