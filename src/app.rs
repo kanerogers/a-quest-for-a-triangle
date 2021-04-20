@@ -1,8 +1,11 @@
 use ovr_mobile_sys::{
-    helpers::vrapi_DefaultLayerLoadingIcon2, ovrJava, ovrLayerHeader2, ovrMobile, ovrModeFlags,
-    ovrModeParms, ovrStructureType_::VRAPI_STRUCTURE_TYPE_MODE_PARMS, ovrSubmitFrameDescription2_,
-    vrapi_EnterVrMode, vrapi_GetPredictedDisplayTime, vrapi_GetPredictedTracking2,
-    vrapi_SubmitFrame2,
+    helpers::{vrapi_DefaultLayerBlackProjection2, vrapi_DefaultLayerLoadingIcon2},
+    ovrFrameFlags_::VRAPI_FRAME_FLAG_FLUSH,
+    ovrFrameLayerFlags_::VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER,
+    ovrJava, ovrLayerHeader2, ovrMobile, ovrModeFlags, ovrModeParms,
+    ovrStructureType_::VRAPI_STRUCTURE_TYPE_MODE_PARMS,
+    ovrSubmitFrameDescription2_, vrapi_EnterVrMode, vrapi_GetPredictedDisplayTime,
+    vrapi_GetPredictedTracking2, vrapi_SubmitFrame2,
 };
 
 use crate::vulkan_renderer::VulkanRenderer;
@@ -52,17 +55,17 @@ impl App {
     }
 
     fn enter_vr(&mut self) {
+        println!("[ENTER_VR] Entering VR Mode..");
         let flags = 0u32 | ovrModeFlags::VRAPI_MODE_FLAG_NATIVE_WINDOW as u32;
         let ovr_mode_parms = ovrModeParms {
             Type: VRAPI_STRUCTURE_TYPE_MODE_PARMS,
             Flags: flags,
             Java: self.java.clone(),
             WindowSurface: ndk_glue::native_window().as_ref().unwrap().ptr().as_ptr() as u64,
-            Display: todo!(),
-            ShareContext: todo!(),
+            Display: 0,
+            ShareContext: 0,
         };
 
-        println!("[ENTER_VR] Entering VR Mode..");
         let ovr_mobile = unsafe { vrapi_EnterVrMode(&ovr_mode_parms) };
         println!("[ENTER_VR] Done.");
 
@@ -74,6 +77,7 @@ impl App {
     }
 
     unsafe fn render(&mut self) {
+        println!("In render..");
         // Get the HMD pose, predicted for the middle of the time period during which
         // the new eye images will be displayed. The number of frames predicted ahead
         // depends on the pipeline depth of the engine and the synthesis rate.
@@ -87,7 +91,11 @@ impl App {
 
         // Render eye images and setup the 'ovrSubmitFrameDescription2' using 'ovrTracking2' data.
 
-        let layer = vrapi_DefaultLayerLoadingIcon2();
+        let mut blackLayer = vrapi_DefaultLayerBlackProjection2();
+        blackLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER as u32;
+
+        let mut iconLayer = vrapi_DefaultLayerLoadingIcon2();
+        iconLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER as u32;
         // layer.HeadPose = tracking.HeadPose;
         // for eye in 0..2 {
         //     let colorTextureSwapChainIndex = self.frame_index as i32
@@ -104,19 +112,28 @@ impl App {
         //         ovrMatrix4f_TanAngleMatrixFromProjection(&tracking.Eye[eye].ProjectionMatrix);
         // }
 
-        let layers = [&layer.Header as *const ovrLayerHeader2];
+        let layers = [
+            &blackLayer.Header as *const ovrLayerHeader2,
+            &iconLayer.Header as *const ovrLayerHeader2,
+        ];
+
+        let mut frameFlags = 0;
+        frameFlags |= VRAPI_FRAME_FLAG_FLUSH as u32;
 
         let frame_desc = ovrSubmitFrameDescription2_ {
-            Flags: 0,
+            Flags: frameFlags,
             SwapInterval: 1,
             FrameIndex: self.frame_index as u64,
-            Pad: std::mem::zeroed(),
             DisplayTime: predicted_display_time,
-            LayerCount: 1,
+            LayerCount: layers.len() as u32,
             Layers: layers.as_ptr(),
+            Pad: std::mem::zeroed(),
         };
 
+        println!("About to submit frame..");
+
         // Hand over the eye images to the time warp.
-        vrapi_SubmitFrame2(*self.ovr_mobile.as_ref().unwrap(), &frame_desc);
+        let result = vrapi_SubmitFrame2(*self.ovr_mobile.as_ref().unwrap(), &frame_desc);
+        println!("Submit frame result: {:?}", result);
     }
 }

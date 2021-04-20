@@ -31,7 +31,7 @@ impl VulkanRenderer {
         let (instance, entry) = vulkan_init();
         println!("[VulkanRenderer] ..done");
 
-        let required_device_extensions = get_required_extensions();
+        let required_device_extensions = get_required_device_extensions();
 
         println!("[VulkanRenderer] Getting physical device..");
         let (physical_device, queue_family_indices) =
@@ -116,7 +116,11 @@ fn get_instance_extensions() -> Vec<CString> {
         .collect::<Vec<_>>();
 
     extensions.push(vk::KhrGetPhysicalDeviceProperties2Fn::name().to_owned());
-    extensions.push(vk::ExtDebugUtilsFn::name().to_owned());
+    // extensions.push(vk::ExtDebugUtilsFn::name().to_owned());
+
+    for ext in &extensions {
+        println!("ext: {:?}", ext);
+    }
 
     return extensions;
 
@@ -128,18 +132,20 @@ fn get_extension_names() -> Vec<&'static CStr> {
     return Vec::new();
 }
 
-unsafe fn get_required_extensions() -> Vec<CString> {
+unsafe fn get_required_device_extensions() -> Vec<CString> {
     let device_extension_names = CString::new("").unwrap();
     let p = device_extension_names.into_raw();
     vrapi_GetDeviceExtensionsVulkan(p, &mut 4096);
     let device_extension_names = CString::from_raw(p);
 
-    return device_extension_names
+    let names = device_extension_names
         .to_str()
         .unwrap()
         .split(" ")
         .map(|c| CString::new(c).unwrap())
         .collect::<Vec<_>>();
+
+    return names;
 }
 
 fn get_layer_names(entry: &Entry) -> Vec<*const u8> {
@@ -181,7 +187,7 @@ fn get_validation_layers() -> Vec<&'static CStr> {
 
 #[cfg(debug_assertions)]
 fn should_add_validation_layers() -> bool {
-    true
+    false
 }
 
 #[cfg(not(debug_assertions))]
