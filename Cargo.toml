@@ -1,8 +1,6 @@
 [package]
 authors = ["Kane Rogers <kane.m.rogers@gmail.com>"]
-build = "build.rs"
 edition = "2018"
-links = "VkLayer_core_validation"
 name = "a_quest_for_triangle"
 version = "0.1.0"
 
@@ -22,6 +20,7 @@ ovr-mobile-sys = {path = "../ovr-mobile-sys"}
 [package.metadata.android]
 apk_label = "A Quest for a Triangle"
 fullscreen = true
+libs = ["src/libs/libVkLayer_core_validation.so"]
 target_sdk_version = 26
 
 [[package.metadata.android.permission]]
