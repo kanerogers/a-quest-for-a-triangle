@@ -1,8 +1,6 @@
 [package]
 authors = ["Kane Rogers <kane.m.rogers@gmail.com>"]
-build = "build.rs"
 edition = "2018"
-links = "VkLayer_core_validation"
 name = "a_quest_for_triangle"
 version = "0.1.0"
 
@@ -22,7 +20,8 @@ ovr-mobile-sys = {path = "../ovr-mobile-sys"}
 [package.metadata.android]
 apk_label = "A Quest for a Triangle"
 fullscreen = true
-target_sdk_version = 26
+target_sdk_version = 28
+libs = ["src/libs/libVkLayer_khronos_validation.so"]
 
 [[package.metadata.android.permission]]
 name = "android.permission.ACCESS_NETWORK_STATE"
@@ -33,5 +32,5 @@ name = "android.permission.ACCESS_NETWORK_STATE"
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.17"
-ndk = "0.2.1"
-ndk-glue = {git = "https://github.com/MarijnS95/android-ndk-rs", branch = "poll-use-identifier"}
+ndk = "0.3.0"
+ndk-glue = "0.3.0"

@@ -66,7 +66,7 @@ unsafe fn vulkan_init() -> (Instance, Entry) {
     let layer_names = get_layer_names(&entry);
 
     let mut debug_messenger_info = get_debug_messenger_create_info();
-    let extension_names = [];
+    let extension_names = get_extension_names();
 
     let app_info = vk::ApplicationInfo::builder()
         .application_name(&app_name)
@@ -82,6 +82,16 @@ unsafe fn vulkan_init() -> (Instance, Entry) {
     let (debug_utils, messenger) = setup_debug_messenger(&entry, &instance, &debug_messenger_info);
 
     (instance, entry)
+}
+
+#[cfg(debug_assertions)]
+fn get_extension_names() -> Vec<*const u8> {
+    return vec![vk::ExtDebugUtilsFn::name().as_ptr()];
+}
+
+#[cfg(not(debug_assertions))]
+fn get_extension_names() -> Vec<&'static CStr> {
+    return Vec::new();
 }
 
 fn get_layer_names(entry: &Entry) -> Vec<*const u8> {
