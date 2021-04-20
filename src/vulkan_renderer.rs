@@ -4,18 +4,15 @@ use ash::{
     Entry, Instance,
 };
 use ovr_mobile_sys::{
-    ovrJava, ovrMatrix4f, ovrSystemCreateInfoVulkan, vrapi_CreateSystemVulkan, VkDevice_T,
-    VkInstance_T, VkPhysicalDevice_T,
+    ovrJava, ovrSystemCreateInfoVulkan, vrapi_CreateSystemVulkan, VkDevice_T, VkInstance_T,
+    VkPhysicalDevice_T,
 };
 use std::ffi::{CStr, CString};
 
 use crate::{
     debug_messenger::{get_debug_messenger_create_info, setup_debug_messenger},
     device::create_logical_device,
-    eye_command_buffer::EyeCommandBuffer,
-    frame_buffer::FrameBuffer,
     physical_device::get_physical_device,
-    render_pass::RenderPass,
 };
 
 pub struct VulkanRenderer {
@@ -31,7 +28,7 @@ impl VulkanRenderer {
     pub unsafe fn new(java: &ovrJava) -> Self {
         let (instance, entry) = vulkan_init();
         let vk_instance = instance.handle().as_raw();
-        let (physical_device, queue_family_indices) = get_physical_device(&instance, &entry);
+        let (physical_device, queue_family_indices) = get_physical_device(&instance, &entry, &java);
         let vk_physical_device = physical_device.as_raw();
         let (device, _, _) =
             create_logical_device(&instance, physical_device, &queue_family_indices);
@@ -107,10 +104,6 @@ fn get_layer_names(entry: &Entry) -> Vec<*const u8> {
         .iter()
         .map(|l| unsafe { CStr::from_ptr(l.layer_name.as_ptr()) })
         .collect::<Vec<_>>();
-
-    for supported_layer in &supported_layers {
-        println!("Supported layer: {:?}", supported_layer);
-    }
 
     for layer in validation_layers {
         assert!(
