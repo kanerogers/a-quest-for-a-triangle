@@ -10,6 +10,7 @@ mod physical_device;
 mod queue_family_indices;
 mod render_pass;
 mod vulkan_renderer;
+mod util;
 
 mod lib {
     use crate::{app::App, vulkan_renderer::VulkanRenderer};

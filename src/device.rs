@@ -1,3 +1,6 @@
+use crate::util::cstrings_to_raw;
+use std::ffi::CString;
+
 use ash::{
     version::{DeviceV1_0, InstanceV1_0},
     vk, Device, Instance,
@@ -10,19 +13,10 @@ pub unsafe fn create_logical_device<'a>(
     instance: &Instance,
     physical_device: vk::PhysicalDevice,
     indices: &QueueFamilyIndices,
+    required_extensions: &Vec<CString>,
 ) -> (Device, vk::Queue, vk::Queue) {
-    // TODO: Portability
-    // let extensions = portability_extensions();
-    // if has_portability(instance, physical_device) {
-    //     let mut extensions = extensions.iter().map(|i| i.as_c_str()).collect();
-    //     required_extensions.append(&mut extensions);
-    // }
-    // let required_extensions_raw = required_extensions
-    //     .iter()
-    //     .map(|e| e.as_ptr())
-    //     .collect::<Vec<_>>();
-    let required_extensions_raw = [];
     let queue_priorities = [1.0];
+    let required_extensions_raw = cstrings_to_raw(required_extensions);
     let graphics_queue_create_info = vk::DeviceQueueCreateInfo::builder()
         .queue_priorities(&queue_priorities)
         .queue_family_index(indices.graphics_family.unwrap())
