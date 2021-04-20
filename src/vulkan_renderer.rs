@@ -116,7 +116,7 @@ fn get_instance_extensions() -> Vec<CString> {
         .collect::<Vec<_>>();
 
     extensions.push(vk::KhrGetPhysicalDeviceProperties2Fn::name().to_owned());
-    // extensions.push(vk::ExtDebugUtilsFn::name().to_owned());
+    extensions.push(vk::ExtDebugUtilsFn::name().to_owned());
 
     for ext in &extensions {
         println!("ext: {:?}", ext);
@@ -187,7 +187,7 @@ fn get_validation_layers() -> Vec<&'static CStr> {
 
 #[cfg(debug_assertions)]
 fn should_add_validation_layers() -> bool {
-    false
+    true
 }
 
 #[cfg(not(debug_assertions))]

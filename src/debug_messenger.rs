@@ -15,6 +15,8 @@ pub fn setup_debug_messenger(
             .unwrap()
     };
 
+    println!("Created messenger: {:?}", messenger);
+
     (Some(debug_utils), Some(messenger))
 }
 
