@@ -20,15 +20,18 @@ ovr-mobile-sys = {path = "../ovr-mobile-sys"}
 [package.metadata.android]
 apk_label = "A Quest for a Triangle"
 fullscreen = true
-target_sdk_version = 28
 libs = ["src/libs/libVkLayer_khronos_validation.so"]
+target_sdk_version = 28
+
+[[package.metadata.android.feature]]
+name = "oculus.software.handtracking"
+required = true
 
 [[package.metadata.android.permission]]
 name = "android.permission.ACCESS_NETWORK_STATE"
 
-# [[package.metadata.android.activity_metadatas]]
-# name = "com.oculus.vr.focusaware"
-# value = "true"
+[[package.metadata.android.permission]]
+name = "oculus.permission.HAND_TRACKING"
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.17"
