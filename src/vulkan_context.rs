@@ -68,6 +68,7 @@ unsafe fn vulkan_init() -> (Instance, Entry) {
     let app_name = CString::new("A Quest for a Triangle").unwrap();
     let entry = Entry::new().unwrap();
     let layer_names = get_layer_names(&entry);
+    let layer_names_raw = cstrings_to_raw(&layer_names);
 
     let mut debug_messenger_info = get_debug_messenger_create_info();
     let extension_names = get_instance_extensions();
@@ -79,7 +80,7 @@ unsafe fn vulkan_init() -> (Instance, Entry) {
     let create_info = vk::InstanceCreateInfo::builder()
         .application_info(&app_info)
         .enabled_extension_names(&extension_names_raw)
-        .enabled_layer_names(layer_names.as_slice())
+        .enabled_layer_names(&layer_names_raw)
         .push_next(&mut debug_messenger_info);
 
     let instance = entry.create_instance(&create_info, None).unwrap();
@@ -107,13 +108,7 @@ fn get_instance_extensions() -> Vec<CString> {
     extensions.push(vk::KhrGetPhysicalDeviceProperties2Fn::name().to_owned());
     extensions.push(vk::ExtDebugUtilsFn::name().to_owned());
 
-    for ext in &extensions {
-        println!("ext: {:?}", ext);
-    }
-
     return extensions;
-
-    // return vec![vk::ExtDebugUtilsFn::name().as_ptr()];
 }
 
 #[cfg(not(debug_assertions))]
@@ -137,12 +132,7 @@ unsafe fn get_required_device_extensions() -> Vec<CString> {
     return names;
 }
 
-fn get_layer_names(entry: &Entry) -> Vec<*const u8> {
-    let mut validation_layers_raw = Vec::new();
-    if !should_add_validation_layers() {
-        return validation_layers_raw;
-    };
-
+fn get_layer_names(entry: &Entry) -> Vec<CString> {
     let validation_layers = get_validation_layers();
     let supported_layers = entry
         .enumerate_instance_layer_properties()
@@ -151,26 +141,21 @@ fn get_layer_names(entry: &Entry) -> Vec<*const u8> {
         .map(|l| unsafe { CStr::from_ptr(l.layer_name.as_ptr()) })
         .collect::<Vec<_>>();
 
-    for layer in validation_layers {
-        assert!(
-            supported_layers.contains(&layer),
-            "Unsupported layer: {:?}",
-            layer
-        );
-        validation_layers_raw.push(layer.as_ptr() as *const u8)
+    for layer in &validation_layers {
+        assert!(supported_layers.contains(&layer.as_c_str()));
     }
 
-    return validation_layers_raw;
+    return validation_layers;
 }
 
 #[cfg(debug_assertions)]
-fn get_validation_layers() -> Vec<&'static CStr> {
-    let validation_layer = CStr::from_bytes_with_nul(b"VK_LAYER_KHRONOS_validation\0").unwrap();
+fn get_validation_layers() -> Vec<CString> {
+    let validation_layer = CString::new("VK_LAYER_KHRONOS_validation").unwrap();
     return vec![validation_layer];
 }
 
 #[cfg(not(debug_assertions))]
-fn get_validation_layers() -> Vec<&'static CStr> {
+fn get_validation_layers() -> Vec<CString> {
     return Vec::new();
 }
 

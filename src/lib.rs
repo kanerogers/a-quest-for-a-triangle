@@ -1,7 +1,6 @@
 #![allow(non_snake_case, unused_variables, dead_code)]
 mod app;
 mod colour_swap_chain;
-mod vulkan_context;
 mod debug_messenger;
 mod device;
 mod eye_command_buffer;
@@ -11,10 +10,11 @@ mod physical_device;
 mod queue_family_indices;
 mod render_pass;
 mod util;
+mod vulkan_context;
 mod vulkan_renderer;
 
 mod lib {
-    use crate::{app::App, vulkan_renderer::VulkanRenderer};
+    use crate::app::App;
 
     use ndk::looper::{Poll, ThreadLooper};
     use ovr_mobile_sys::{
@@ -31,7 +31,7 @@ mod lib {
 
     #[cfg_attr(target_os = "android", ndk_glue::main(backtrace = "on"))]
     fn main() {
-        println!("[INIT] Main called");
+        println!("[INIT] Welcome to a Quest for Triangle!");
         let native_activity = ndk_glue::native_activity();
         let vm_ptr = native_activity.vm();
 
@@ -44,21 +44,8 @@ mod lib {
             ActivityObject: native_activity.activity(),
         };
 
-        let init_ovr_result = init_ovr(java);
-        println!("[INIT] vrapi_Initialize Result: {:?}", init_ovr_result);
-
-        // Create Vulkan Renderer
-        let renderer = unsafe { VulkanRenderer::new() };
-
-        let mut app = App {
-            java,
-            ovr_mobile: None,
-            destroy_requested: false,
-            resumed: false,
-            window_created: false,
-            renderer,
-            frame_index: 1,
-        };
+        init_ovr(java);
+        let mut app = App::new(java);
 
         println!("[INIT] Beginning loop..");
 
@@ -74,7 +61,7 @@ mod lib {
         println!("Destroy requested! Bye for now!");
     }
 
-    fn init_ovr(java: ovrJava_) -> ovr_mobile_sys::ovrInitializeStatus_ {
+    fn init_ovr(java: ovrJava_) -> () {
         let parms: ovrInitParms = ovrInitParms {
             Type: VRAPI_STRUCTURE_TYPE_INIT_PARMS,
             ProductVersion: VRAPI_PRODUCT_VERSION as i32,
@@ -84,9 +71,9 @@ mod lib {
             GraphicsAPI: ovrGraphicsAPI_::VRAPI_GRAPHICS_API_VULKAN_1,
             Java: java,
         };
-        println!("[INIT] Initialising vrapi");
+        println!("[INIT] Initialising vrapi..");
         let result = unsafe { vrapi_Initialize(&parms) };
-        result
+        println!("[INIT] Done. Result: {:?}", result);
     }
 
     pub fn poll_all_ms(block: bool) -> Option<ndk_glue::Event> {
