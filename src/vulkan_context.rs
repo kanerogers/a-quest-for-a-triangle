@@ -1,3 +1,9 @@
+use crate::{
+    debug_messenger::{get_debug_messenger_create_info, setup_debug_messenger},
+    device::create_logical_device,
+    physical_device::get_physical_device,
+    util::cstrings_to_raw,
+};
 use ash::{
     version::{EntryV1_0, InstanceV1_0},
     vk::{self, Handle},
@@ -9,18 +15,22 @@ use ovr_mobile_sys::{
 };
 use std::ffi::{CStr, CString};
 
-use crate::{
-    debug_messenger::{get_debug_messenger_create_info, setup_debug_messenger},
-    device::create_logical_device,
-    physical_device::get_physical_device,
-    util::cstrings_to_raw,
-};
-
+#[derive(Clone)]
 pub struct VulkanContext {
     pub entry: Entry,
     pub instance: Instance,
     pub device: Device,
     pub physical_device: vk::PhysicalDevice,
+    pub graphics_queue: vk::Queue,
+    pub present_queue: vk::Queue,
+}
+
+impl std::fmt::Debug for VulkanContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VulkanContext")
+            .field("physical_device", &self.physical_device)
+            .finish()
+    }
 }
 
 impl VulkanContext {
@@ -29,9 +39,9 @@ impl VulkanContext {
         let required_device_extensions = get_required_device_extensions();
 
         let (physical_device, queue_family_indices) =
-            get_physical_device(&instance, &entry, &required_device_extensions);
+            get_physical_device(&instance, &required_device_extensions);
 
-        let (device, _, _) = create_logical_device(
+        let (device, graphics_queue, present_queue) = create_logical_device(
             &instance,
             physical_device,
             &queue_family_indices,
@@ -45,6 +55,8 @@ impl VulkanContext {
             instance,
             device,
             physical_device,
+            graphics_queue,
+            present_queue,
         }
     }
 }
@@ -85,7 +97,8 @@ unsafe fn vulkan_init() -> (Instance, Entry) {
 
     let instance = entry.create_instance(&create_info, None).unwrap();
 
-    let (debug_utils, messenger) = setup_debug_messenger(&entry, &instance, &debug_messenger_info);
+    let (_debug_utils, _messenger) =
+        setup_debug_messenger(&entry, &instance, &debug_messenger_info);
     println!("[VulkanContext] ..done");
 
     (instance, entry)
@@ -157,14 +170,4 @@ fn get_validation_layers() -> Vec<CString> {
 #[cfg(not(debug_assertions))]
 fn get_validation_layers() -> Vec<CString> {
     return Vec::new();
-}
-
-#[cfg(debug_assertions)]
-fn should_add_validation_layers() -> bool {
-    true
-}
-
-#[cfg(not(debug_assertions))]
-fn should_add_validation_layers() -> bool {
-    false
 }

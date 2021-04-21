@@ -9,13 +9,17 @@ use ash::{
 use crate::queue_family_indices::QueueFamilyIndices;
 
 // Logical Device
-pub unsafe fn create_logical_device<'a>(
+pub unsafe fn create_logical_device(
     instance: &Instance,
     physical_device: vk::PhysicalDevice,
     indices: &QueueFamilyIndices,
     required_extensions: &Vec<CString>,
 ) -> (Device, vk::Queue, vk::Queue) {
-    println!("[VulkanContext] Creating logical device..");
+    println!(
+        "[VulkanContext] Creating logical device.. indicies are {:?}",
+        indices
+    );
+
     let queue_priorities = [1.0];
     let required_extensions_raw = cstrings_to_raw(required_extensions);
     let graphics_queue_create_info = vk::DeviceQueueCreateInfo::builder()

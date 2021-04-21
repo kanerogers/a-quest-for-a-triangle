@@ -1,10 +1,9 @@
 use crate::queue_family_indices::QueueFamilyIndices;
-use ash::{version::InstanceV1_0, vk, Entry, Instance};
+use ash::{version::InstanceV1_0, vk, Instance};
 use std::ffi::{CStr, CString};
 
 pub fn get_physical_device(
     instance: &Instance,
-    entry: &Entry,
     required_extensions: &Vec<CString>,
 ) -> (vk::PhysicalDevice, QueueFamilyIndices) {
     unsafe {
@@ -12,7 +11,7 @@ pub fn get_physical_device(
         let devices = instance.enumerate_physical_devices().unwrap();
         let mut devices = devices
             .into_iter()
-            .map(|d| get_suitability(d, instance, entry, required_extensions))
+            .map(|d| get_suitability(d, instance, required_extensions))
             .collect::<Vec<_>>();
         devices.sort_by_key(|i| i.0);
 
@@ -27,11 +26,10 @@ pub fn get_physical_device(
 unsafe fn get_suitability(
     device: vk::PhysicalDevice,
     instance: &Instance,
-    entry: &Entry,
     required_extensions: &Vec<CString>,
 ) -> (i8, QueueFamilyIndices, vk::PhysicalDevice) {
     let properties = instance.get_physical_device_properties(device);
-    let indices = QueueFamilyIndices::find_queue_families(instance, device, entry);
+    let indices = QueueFamilyIndices::find_queue_families(instance, device);
     let has_extension_support =
         check_device_extension_support(instance, device, required_extensions);
     let has_graphics_family = indices.graphics_family.is_some();
