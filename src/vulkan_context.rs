@@ -113,7 +113,7 @@ fn create_system_vulkan(instance: &Instance, physical_device: vk::PhysicalDevice
     };
     println!("[VulkanContext] Calling vrapi_CreateSystemVulkan..");
     unsafe { vrapi_CreateSystemVulkan(&mut system_info) };
-    println!("[VulkanContext] ..done. VulkanRenderer initialised.");
+    println!("[VulkanContext] ..done. VulkanContext created!");
 }
 
 fn vulkan_init() -> (Instance, Entry) {

@@ -1,27 +1,103 @@
 use ash::{version::DeviceV1_0, vk, Device};
+use ovr_mobile_sys::ovrVector4f;
 
-pub struct RenderPass {}
+pub enum RenderPassType {
+    Inline,
+    SecondaryCommandBuffers,
+}
 
-pub fn create_render_pass(format: vk::Format, device: &Device) -> vk::RenderPass {
+pub struct RenderPass {
+    pub render_pass_type: RenderPassType,
+    pub render_pass: vk::RenderPass,
+}
+
+impl RenderPass {
+    pub fn new(device: &Device) -> Self {
+        let render_pass = create_render_pass(device);
+        Self {
+            render_pass,
+            render_pass_type: RenderPassType::Inline,
+        }
+    }
+}
+
+pub fn create_render_pass(device: &Device) -> vk::RenderPass {
+    println!("[RenderPass] Creating render pass");
+    let colour_format = vk::Format::R8G8B8A8_UNORM;
+    let depth_format = vk::Format::D24_UNORM_S8_UINT;
+    let sample_count = vk::SampleCountFlags::TYPE_4;
+    let clear_colour = ovrVector4f {
+        x: 0.125,
+        y: 0.0,
+        z: 0.125,
+        w: 1.0,
+    };
+
     let color_attachment = vk::AttachmentDescription::builder()
-        .format(format)
+        .format(colour_format)
+        .samples(sample_count)
         .load_op(vk::AttachmentLoadOp::CLEAR)
-        .store_op(vk::AttachmentStoreOp::STORE)
+        .store_op(vk::AttachmentStoreOp::DONT_CARE)
         .stencil_load_op(vk::AttachmentLoadOp::DONT_CARE)
         .stencil_store_op(vk::AttachmentStoreOp::DONT_CARE)
-        .initial_layout(vk::ImageLayout::UNDEFINED)
-        .final_layout(vk::ImageLayout::PRESENT_SRC_KHR)
-        .samples(vk::SampleCountFlags::TYPE_1)
+        .initial_layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
+        .final_layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
         .build();
-
     let color_attachments = [color_attachment];
-
     let color_attachment_ref = vk::AttachmentReference::builder()
         .attachment(0)
         .layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
         .build();
-
     let color_attachment_refs = [color_attachment_ref];
+
+    let resolve_attachment = vk::AttachmentDescription::builder()
+        .format(colour_format)
+        .samples(vk::SampleCountFlags::TYPE_1)
+        .load_op(vk::AttachmentLoadOp::DONT_CARE)
+        .store_op(vk::AttachmentStoreOp::STORE)
+        .initial_layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
+        .final_layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
+        .build();
+    let resolve_attachments = [resolve_attachment];
+    let resolve_attachment_ref = vk::AttachmentReference::builder()
+        .attachment(1)
+        .layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
+        .build();
+    let resolve_attachment_refs = [resolve_attachment_ref];
+
+    let depth_attachment = vk::AttachmentDescription::builder()
+        .format(depth_format)
+        .samples(sample_count)
+        .load_op(vk::AttachmentLoadOp::CLEAR)
+        .store_op(vk::AttachmentStoreOp::DONT_CARE)
+        .stencil_load_op(vk::AttachmentLoadOp::DONT_CARE)
+        .stencil_store_op(vk::AttachmentStoreOp::DONT_CARE)
+        .initial_layout(vk::ImageLayout::FRAGMENT_DENSITY_MAP_OPTIMAL_EXT)
+        .final_layout(vk::ImageLayout::FRAGMENT_DENSITY_MAP_OPTIMAL_EXT)
+        .build();
+    let depth_attachments = [depth_attachment];
+    let depth_attachment_ref = vk::AttachmentReference::builder()
+        .attachment(2)
+        .layout(vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+        .build();
+    let depth_attachment_refs = [depth_attachment_ref];
+
+    let fragment_density_attachment = vk::AttachmentDescription::builder()
+        .format(vk::Format::R8G8_UNORM)
+        .samples(vk::SampleCountFlags::TYPE_1)
+        .load_op(vk::AttachmentLoadOp::DONT_CARE)
+        .store_op(vk::AttachmentStoreOp::DONT_CARE)
+        .stencil_load_op(vk::AttachmentLoadOp::DONT_CARE)
+        .stencil_store_op(vk::AttachmentStoreOp::DONT_CARE)
+        .initial_layout(vk::ImageLayout::FRAGMENT_DENSITY_MAP_OPTIMAL_EXT)
+        .final_layout(vk::ImageLayout::FRAGMENT_DENSITY_MAP_OPTIMAL_EXT)
+        .build();
+    let fragment_density_attachments = [fragment_density_attachment];
+    let fragment_density_attachment_ref = vk::AttachmentReference::builder()
+        .attachment(3)
+        .layout(vk::ImageLayout::FRAGMENT_DENSITY_MAP_OPTIMAL_EXT)
+        .build();
+    let fragment_density_attachment_refs = [fragment_density_attachment_ref];
 
     let subpass = vk::SubpassDescription::builder()
         .pipeline_bind_point(vk::PipelineBindPoint::GRAPHICS)
@@ -44,11 +120,14 @@ pub fn create_render_pass(format: vk::Format, device: &Device) -> vk::RenderPass
         .subpasses(&subpasses)
         .dependencies(&dependencies);
 
-    unsafe {
+    let render_pass = unsafe {
         device
             .create_render_pass(&render_pass_create_info, None)
-            .unwrap()
-    }
+            .expect("Unable to create Render Pass")
+    };
+
+    println!("[RenderPass] ..done!");
+    return render_pass;
 }
 
 // typedef struct {
@@ -63,6 +142,11 @@ pub fn create_render_pass(format: vk::Format, device: &Device) -> vk::RenderPass
 //     VkRenderPass renderPass;
 //     ovrVector4f clearColor;
 // } ovrVkRenderPass;
+
+// int flags = OVR_RENDERPASS_FLAG_CLEAR_COLOR_BUFFER | OVR_RENDERPASS_FLAG_CLEAR_DEPTH_BUFFER;
+// if (useFFR) {
+//     flags |= OVR_RENDERPASS_FLAG_INCLUDE_FRAG_DENSITY;
+// }
 
 /*
 ovrVkRenderPass_Create(

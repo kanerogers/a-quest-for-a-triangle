@@ -1,6 +1,8 @@
 use std::ptr::NonNull;
 
-use crate::{colour_swap_chain::ColourSwapChain, vulkan_context::VulkanContext};
+use crate::{
+    colour_swap_chain::ColourSwapChain, render_pass::RenderPass, vulkan_context::VulkanContext,
+};
 use ovr_mobile_sys::{
     helpers::{vrapi_DefaultLayerBlackProjection2, vrapi_DefaultLayerLoadingIcon2},
     ovrFrameFlags_::VRAPI_FRAME_FLAG_FLUSH,
@@ -12,7 +14,7 @@ use ovr_mobile_sys::{
 pub struct VulkanRenderer {
     pub context: VulkanContext,
     pub frame_index: i64,
-    // pub render_pass_single_view: RenderPass,
+    pub render_pass_single_view: RenderPass,
     // pub eye_command_buffers: Vec<EyeCommandBuffer>,
     // pub frame_buffers: Vec<FrameBuffer>,
     // pub view_matrix: Vec<ovrMatrix4f>,
@@ -28,11 +30,14 @@ impl VulkanRenderer {
             .map(|_| ColourSwapChain::new(java))
             .collect::<Vec<_>>();
 
+        let render_pass_single_view = RenderPass::new(&context.device);
+
         println!("[VulkanRenderer] ..done!");
 
         Self {
             context,
             frame_index: 0,
+            render_pass_single_view,
             // render_pass_single_view,
             // eye_command_buffers,
             // frame_buffers,
