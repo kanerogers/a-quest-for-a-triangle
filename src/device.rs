@@ -9,16 +9,13 @@ use ash::{
 use crate::queue_family_indices::QueueFamilyIndices;
 
 // Logical Device
-pub unsafe fn create_logical_device(
+pub fn create_logical_device(
     instance: &Instance,
     physical_device: vk::PhysicalDevice,
     indices: &QueueFamilyIndices,
     required_extensions: &Vec<CString>,
 ) -> (Device, vk::Queue, vk::Queue) {
-    println!(
-        "[VulkanContext] Creating logical device.. indicies are {:?}",
-        indices
-    );
+    println!("[VulkanContext] Creating logical device.. ");
 
     let queue_priorities = [1.0];
     let required_extensions_raw = cstrings_to_raw(required_extensions);
@@ -44,12 +41,11 @@ pub unsafe fn create_logical_device(
         .enabled_extension_names(&required_extensions_raw)
         .enabled_features(&physical_device_features);
 
-    let device = instance
-        .create_device(physical_device, &device_create_info, None)
-        .unwrap();
+    let device =
+        unsafe { instance.create_device(physical_device, &device_create_info, None) }.unwrap();
 
-    let graphics_queue = device.get_device_queue(indices.graphics_family.unwrap(), 0);
-    let present_queue = device.get_device_queue(indices.present_family.unwrap(), 0);
+    let graphics_queue = unsafe { device.get_device_queue(indices.graphics_family.unwrap(), 0) };
+    let present_queue = unsafe { device.get_device_queue(indices.present_family.unwrap(), 0) };
 
     println!("[VulkanContext] ..done");
 

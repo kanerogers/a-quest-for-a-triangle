@@ -1,5 +1,5 @@
-use std::ffi::CStr;
 use ash::{extensions::ext, vk, Entry, Instance};
+use std::ffi::CStr;
 
 #[cfg(debug_assertions)]
 pub fn setup_debug_messenger(
@@ -15,19 +15,14 @@ pub fn setup_debug_messenger(
             .unwrap()
     };
 
-    println!("Created messenger: {:?}", messenger);
+    println!("[DebugMessenger] Created messenger: {:?}", messenger);
 
     (Some(debug_utils), Some(messenger))
 }
 
 pub fn get_debug_messenger_create_info() -> vk::DebugUtilsMessengerCreateInfoEXTBuilder<'static> {
-    let message_severity = 
-    // vk::DebugUtilsMessageSeverityFlagsEXT::VERBOSE
-        vk::DebugUtilsMessageSeverityFlagsEXT::WARNING
-        | vk::DebugUtilsMessageSeverityFlagsEXT::ERROR;
-    let message_type = vk::DebugUtilsMessageTypeFlagsEXT::GENERAL
-        | vk::DebugUtilsMessageTypeFlagsEXT::VALIDATION
-        | vk::DebugUtilsMessageTypeFlagsEXT::PERFORMANCE;
+    let message_severity = vk::DebugUtilsMessageSeverityFlagsEXT::all();
+    let message_type = vk::DebugUtilsMessageTypeFlagsEXT::all();
     vk::DebugUtilsMessengerCreateInfoEXT::builder()
         .message_severity(message_severity)
         .message_type(message_type)
@@ -42,7 +37,7 @@ unsafe extern "system" fn debug_messenger_callback(
     _p_user_data: *mut std::ffi::c_void,
 ) -> vk::Bool32 {
     println!(
-        "[VULKAN]: {:?}",
+        "[DebugMessenger]: {:?}",
         CStr::from_ptr((*p_callback_data).p_message)
     );
     return vk::FALSE;

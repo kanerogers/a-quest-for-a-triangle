@@ -18,7 +18,7 @@ pub fn get_physical_device(
         let (suitability, indices, physical_device) = devices.remove(0);
         assert_ne!(suitability, 0, "Failed to find a suitable device");
 
-        println!("[VulkanContext] ..done: {:?}", physical_device);
+        println!("[VulkanContext] ..done");
         (physical_device, indices)
     }
 }

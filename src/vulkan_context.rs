@@ -5,7 +5,7 @@ use crate::{
     util::cstrings_to_raw,
 };
 use ash::{
-    version::{EntryV1_0, InstanceV1_0},
+    version::{DeviceV1_0, EntryV1_0, InstanceV1_0},
     vk::{self, Handle},
     Device, Entry, Instance,
 };
@@ -23,6 +23,8 @@ pub struct VulkanContext {
     pub physical_device: vk::PhysicalDevice,
     pub graphics_queue: vk::Queue,
     pub present_queue: vk::Queue,
+    pub command_pool: vk::CommandPool,
+    pub pipeline_cache: vk::PipelineCache,
 }
 
 impl std::fmt::Debug for VulkanContext {
@@ -34,7 +36,7 @@ impl std::fmt::Debug for VulkanContext {
 }
 
 impl VulkanContext {
-    pub unsafe fn new() -> Self {
+    pub fn new() -> Self {
         let (instance, entry) = vulkan_init();
         let required_device_extensions = get_required_device_extensions();
 
@@ -48,6 +50,10 @@ impl VulkanContext {
             &required_device_extensions,
         );
 
+        let command_pool =
+            create_command_pool(&device, queue_family_indices.graphics_family.unwrap());
+        let pipeline_cache = create_pipeline_cache();
+
         create_system_vulkan(&instance, physical_device, &device);
 
         Self {
@@ -57,8 +63,40 @@ impl VulkanContext {
             physical_device,
             graphics_queue,
             present_queue,
+            command_pool,
+            pipeline_cache,
         }
     }
+}
+
+fn create_command_pool(device: &Device, queue_family_index: u32) -> vk::CommandPool {
+    println!("[VulkanContext] Creating command pool");
+    let create_info = vk::CommandPoolCreateInfo::builder()
+        .flags(vk::CommandPoolCreateFlags::RESET_COMMAND_BUFFER)
+        .queue_family_index(queue_family_index)
+        .build();
+
+    let command_pool = unsafe {
+        device
+            .create_command_pool(&create_info, None)
+            .expect("Unable to create command pool")
+    };
+
+    println!("[VulkanContext] Done");
+    return command_pool;
+}
+
+fn create_pipeline_cache() -> vk::PipelineCache {
+    // VkPipelineCacheCreateInfo pipelineCacheCreateInfo;
+    // pipelineCacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+    // pipelineCacheCreateInfo.pNext = NULL;
+    // pipelineCacheCreateInfo.flags = 0;
+    // pipelineCacheCreateInfo.initialDataSize = 0;
+    // pipelineCacheCreateInfo.pInitialData = NULL;
+
+    // VK(device->vkCreatePipelineCache(
+    //     device->device, &pipelineCacheCreateInfo, VK_ALLOCATOR, &context->pipelineCache));
+    todo!()
 }
 
 fn create_system_vulkan(instance: &Instance, physical_device: vk::PhysicalDevice, device: &Device) {
@@ -75,7 +113,7 @@ fn create_system_vulkan(instance: &Instance, physical_device: vk::PhysicalDevice
     println!("[VulkanContext] ..done. VulkanRenderer initialised.");
 }
 
-unsafe fn vulkan_init() -> (Instance, Entry) {
+fn vulkan_init() -> (Instance, Entry) {
     println!("[VulkanContext] Initialising Vulkan..");
     let app_name = CString::new("A Quest for a Triangle").unwrap();
     let entry = Entry::new().unwrap();
@@ -95,7 +133,7 @@ unsafe fn vulkan_init() -> (Instance, Entry) {
         .enabled_layer_names(&layer_names_raw)
         .push_next(&mut debug_messenger_info);
 
-    let instance = entry.create_instance(&create_info, None).unwrap();
+    let instance = unsafe { entry.create_instance(&create_info, None) }.unwrap();
 
     let (_debug_utils, _messenger) =
         setup_debug_messenger(&entry, &instance, &debug_messenger_info);
@@ -129,11 +167,11 @@ fn get_extension_names() -> Vec<&'static CStr> {
     return Vec::new();
 }
 
-unsafe fn get_required_device_extensions() -> Vec<CString> {
+fn get_required_device_extensions() -> Vec<CString> {
     let device_extension_names = CString::new("").unwrap();
     let p = device_extension_names.into_raw();
-    vrapi_GetDeviceExtensionsVulkan(p, &mut 4096);
-    let device_extension_names = CString::from_raw(p);
+    unsafe { vrapi_GetDeviceExtensionsVulkan(p, &mut 4096) };
+    let device_extension_names = unsafe { CString::from_raw(p) };
 
     let names = device_extension_names
         .to_str()
