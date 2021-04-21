@@ -1,6 +1,7 @@
 #![allow(non_snake_case, unused_variables, dead_code)]
 mod app;
 mod colour_swap_chain;
+mod context;
 mod debug_messenger;
 mod device;
 mod eye_command_buffer;
@@ -9,8 +10,8 @@ mod old_vulkan;
 mod physical_device;
 mod queue_family_indices;
 mod render_pass;
-mod vulkan_renderer;
 mod util;
+mod vulkan_renderer;
 
 mod lib {
     use crate::{app::App, vulkan_renderer::VulkanRenderer};
@@ -47,7 +48,7 @@ mod lib {
         println!("[INIT] vrapi_Initialize Result: {:?}", init_ovr_result);
 
         // Create Vulkan Renderer
-        let renderer = unsafe { VulkanRenderer::new(&java) };
+        let renderer = unsafe { VulkanRenderer::new() };
 
         let mut app = App {
             java,

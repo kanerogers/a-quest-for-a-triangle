@@ -8,6 +8,7 @@ pub fn get_physical_device(
     required_extensions: &Vec<CString>,
 ) -> (vk::PhysicalDevice, QueueFamilyIndices) {
     unsafe {
+        println!("[VulkanRenderer] Getting physical device..");
         let devices = instance.enumerate_physical_devices().unwrap();
         let mut devices = devices
             .into_iter()
@@ -15,9 +16,11 @@ pub fn get_physical_device(
             .collect::<Vec<_>>();
         devices.sort_by_key(|i| i.0);
 
-        let (suitability, indices, device) = devices.remove(0);
+        let (suitability, indices, physical_device) = devices.remove(0);
         assert_ne!(suitability, 0, "Failed to find a suitable device");
-        (device, indices)
+
+        println!("[VulkanRenderer] ..done: {:?}", physical_device);
+        (physical_device, indices)
     }
 }
 

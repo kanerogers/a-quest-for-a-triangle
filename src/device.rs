@@ -15,6 +15,7 @@ pub unsafe fn create_logical_device<'a>(
     indices: &QueueFamilyIndices,
     required_extensions: &Vec<CString>,
 ) -> (Device, vk::Queue, vk::Queue) {
+    println!("[VulkanRenderer] Creating logical device..");
     let queue_priorities = [1.0];
     let required_extensions_raw = cstrings_to_raw(required_extensions);
     let graphics_queue_create_info = vk::DeviceQueueCreateInfo::builder()
@@ -45,6 +46,8 @@ pub unsafe fn create_logical_device<'a>(
 
     let graphics_queue = device.get_device_queue(indices.graphics_family.unwrap(), 0);
     let present_queue = device.get_device_queue(indices.present_family.unwrap(), 0);
+
+    println!("[VulkanRenderer] ..done");
 
     (device, graphics_queue, present_queue)
 }
