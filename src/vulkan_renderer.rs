@@ -37,7 +37,7 @@ impl VulkanRenderer {
 
     pub unsafe fn render(&mut self, ovr_mobile: NonNull<ovrMobile>) -> () {
         let ovr_mobile = ovr_mobile.as_ptr();
-        println!("In render..");
+        println!("[RENDER] In render..");
         // Get the HMD pose, predicted for the middle of the time period during which
         // the new eye images will be displayed. The number of frames predicted ahead
         // depends on the pipeline depth of the engine and the synthesis rate.
@@ -80,18 +80,18 @@ impl VulkanRenderer {
 
         let frame_desc = ovrSubmitFrameDescription2_ {
             Flags: frameFlags,
-            SwapInterval: 1,
             FrameIndex: self.frame_index as u64,
+            SwapInterval: 1,
             DisplayTime: predicted_display_time,
             LayerCount: layers.len() as u32,
             Layers: layers.as_ptr(),
             Pad: std::mem::zeroed(),
         };
 
-        println!("About to submit frame..");
+        println!("[RENDER] About to submit frame..");
 
         // Hand over the eye images to the time warp.
         let result = vrapi_SubmitFrame2(ovr_mobile, &frame_desc);
-        println!("Submit frame result: {:?}", result);
+        println!("[RENDER] Submit frame result: {:?}", result);
     }
 }

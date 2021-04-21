@@ -16,18 +16,11 @@ mod vulkan_renderer;
 mod lib {
     use crate::app::App;
 
-    use ndk::looper::{Poll, ThreadLooper};
     use ovr_mobile_sys::{
         ovrGraphicsAPI_, ovrInitParms, ovrJava, ovrJava_,
         ovrStructureType_::VRAPI_STRUCTURE_TYPE_INIT_PARMS, vrapi_Initialize, VRAPI_MAJOR_VERSION,
         VRAPI_MINOR_VERSION, VRAPI_PATCH_VERSION, VRAPI_PRODUCT_VERSION,
     };
-
-    use std::time::Duration;
-
-    pub const LOOPER_ID_MAIN: u32 = 0;
-    pub const LOOPER_ID_INPUT: u32 = 1;
-    pub const LOOPER_TIMEOUT: Duration = Duration::from_millis(0u64);
 
     #[cfg_attr(target_os = "android", ndk_glue::main(backtrace = "on"))]
     fn main() {
@@ -47,16 +40,8 @@ mod lib {
         init_ovr(java);
         let mut app = App::new(java);
 
-        println!("[INIT] Beginning loop..");
+        app.run();
 
-        while !app.destroy_requested {
-            loop {
-                match poll_all_ms(false) {
-                    Some(event) => app.handle_event(event),
-                    _ => break,
-                }
-            }
-        }
 
         println!("Destroy requested! Bye for now!");
     }
@@ -76,36 +61,4 @@ mod lib {
         println!("[INIT] Done. Result: {:?}", result);
     }
 
-    pub fn poll_all_ms(block: bool) -> Option<ndk_glue::Event> {
-        let looper = ThreadLooper::for_thread().unwrap();
-        let result = if block {
-            looper.poll_all()
-        } else {
-            looper.poll_all_timeout(LOOPER_TIMEOUT)
-        };
-
-        match result {
-            Ok(Poll::Event { ident, .. }) => {
-                let ident = ident as u32;
-                if ident == LOOPER_ID_MAIN {
-                    ndk_glue::poll_events()
-                } else if ident == LOOPER_ID_INPUT {
-                    if let Some(input_queue) = ndk_glue::input_queue().as_ref() {
-                        while let Some(event) = input_queue.get_event() {
-                            if let Some(event) = input_queue.pre_dispatch(event) {
-                                input_queue.finish_event(event, false);
-                            }
-                        }
-                    }
-                    None
-                } else {
-                    unreachable!(
-                        "Unrecognised looper identifier: {:?} but LOOPER_ID_INPUT is {:?}",
-                        ident, LOOPER_ID_INPUT
-                    );
-                }
-            }
-            _ => None,
-        }
-    }
 }

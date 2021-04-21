@@ -1,10 +1,18 @@
+use ndk::looper::{Poll, ThreadLooper};
 use ovr_mobile_sys::{
-    ovrJava, ovrMobile, ovrModeFlags, ovrModeParms,
-    ovrStructureType_::VRAPI_STRUCTURE_TYPE_MODE_PARMS, vrapi_EnterVrMode,
+    ovrEventDataBuffer, ovrEventHeader_, ovrEventType, ovrJava, ovrMobile, ovrModeFlags,
+    ovrModeParms, ovrStructureType_::VRAPI_STRUCTURE_TYPE_MODE_PARMS, ovrSuccessResult_,
+    vrapi_EnterVrMode, vrapi_PollEvent,
 };
+use std::mem::MaybeUninit;
 use std::ptr::NonNull;
+use std::time::Duration;
 
 use crate::vulkan_renderer::VulkanRenderer;
+
+pub const LOOPER_ID_MAIN: u32 = 0;
+pub const LOOPER_ID_INPUT: u32 = 1;
+pub const LOOPER_TIMEOUT: Duration = Duration::from_millis(0u64);
 pub struct App {
     pub java: ovrJava,
     pub destroy_requested: bool,
@@ -27,8 +35,38 @@ impl App {
         }
     }
 
-    pub fn handle_event(&mut self, event: ndk_glue::Event) -> () {
-        println!("[EVENT] Received event: {:?}", event);
+    pub fn run(&mut self) {
+        while !self.destroy_requested {
+            loop {
+                match self.poll_android_events() {
+                    Some(event) => self.handle_android_event(event),
+                    _ => break,
+                }
+            }
+            loop {
+                match self.poll_vr_api_events() {
+                    Some(e) => self.handle_vr_api_event(e),
+                    _ => break,
+                }
+            }
+            self.next_state();
+        }
+    }
+    pub fn handle_vr_api_event(&mut self, event: ovrEventType) -> () {
+        println!("[VR_API_EVENTS] Polling VR API events..");
+        match event {
+            ovrEventType::VRAPI_EVENT_DATA_LOST => {}
+            ovrEventType::VRAPI_EVENT_NONE => {}
+            ovrEventType::VRAPI_EVENT_VISIBILITY_GAINED => {}
+            ovrEventType::VRAPI_EVENT_VISIBILITY_LOST => {}
+            ovrEventType::VRAPI_EVENT_FOCUS_GAINED => {}
+            ovrEventType::VRAPI_EVENT_FOCUS_LOST => {}
+            ovrEventType::VRAPI_EVENT_DISPLAY_REFRESH_RATE_CHANGE => {}
+        }
+    }
+
+    pub fn handle_android_event(&mut self, event: ndk_glue::Event) -> () {
+        println!("[ANDROID_EVENT] Received event: {:?}", event);
         match event {
             ndk_glue::Event::Resume => self.resumed = true,
             ndk_glue::Event::Destroy => self.destroy_requested = true,
@@ -37,15 +75,12 @@ impl App {
             ndk_glue::Event::Pause => self.resumed = false,
             _ => {}
         }
-
-        self.next_state();
     }
 
     fn next_state(&mut self) {
         if self.need_to_enter_vr() {
             self.enter_vr();
         }
-
         if self.should_render() {
             unsafe {
                 self.render();
@@ -82,5 +117,59 @@ impl App {
     unsafe fn render(&mut self) {
         let ovr_mobile = self.ovr_mobile.unwrap();
         self.renderer.render(ovr_mobile);
+    }
+
+    pub fn poll_android_events(&mut self) -> Option<ndk_glue::Event> {
+        let looper = ThreadLooper::for_thread().unwrap();
+        let result = looper.poll_all_timeout(LOOPER_TIMEOUT);
+
+        match result {
+            Ok(Poll::Event { ident, .. }) => {
+                let ident = ident as u32;
+                if ident == LOOPER_ID_MAIN {
+                    ndk_glue::poll_events()
+                } else if ident == LOOPER_ID_INPUT {
+                    if let Some(input_queue) = ndk_glue::input_queue().as_ref() {
+                        while let Some(event) = input_queue.get_event() {
+                            if let Some(event) = input_queue.pre_dispatch(event) {
+                                input_queue.finish_event(event, false);
+                            }
+                        }
+                    }
+                    None
+                } else {
+                    unreachable!(
+                        "Unrecognised looper identifier: {:?} but LOOPER_ID_INPUT is {:?}",
+                        ident, LOOPER_ID_INPUT
+                    );
+                }
+            }
+            _ => None,
+        }
+    }
+
+    pub fn poll_vr_api_events(&mut self) -> Option<ovrEventType> {
+        let data = unsafe { MaybeUninit::uninit().assume_init() };
+        let mut header = ovrEventHeader_ {
+            EventType: ovrEventType::VRAPI_EVENT_NONE,
+        };
+
+        let _event_data_buffer = ovrEventDataBuffer {
+            EventHeader: header,
+            EventData: data,
+        };
+
+        let pointer = NonNull::new(&mut header).unwrap();
+
+        let result = unsafe { vrapi_PollEvent(pointer.as_ptr()) };
+        if result != ovrSuccessResult_::ovrSuccess as i32 {
+            return None;
+        }
+
+        if header.EventType == ovrEventType::VRAPI_EVENT_NONE {
+            return None;
+        }
+
+        return Some(header.EventType);
     }
 }
