@@ -52,7 +52,7 @@ impl VulkanContext {
 
         let command_pool =
             create_command_pool(&device, queue_family_indices.graphics_family.unwrap());
-        let pipeline_cache = create_pipeline_cache();
+        let pipeline_cache = create_pipeline_cache(&device);
 
         create_system_vulkan(&instance, physical_device, &device);
 
@@ -86,17 +86,20 @@ fn create_command_pool(device: &Device, queue_family_index: u32) -> vk::CommandP
     return command_pool;
 }
 
-fn create_pipeline_cache() -> vk::PipelineCache {
-    // VkPipelineCacheCreateInfo pipelineCacheCreateInfo;
-    // pipelineCacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-    // pipelineCacheCreateInfo.pNext = NULL;
-    // pipelineCacheCreateInfo.flags = 0;
-    // pipelineCacheCreateInfo.initialDataSize = 0;
-    // pipelineCacheCreateInfo.pInitialData = NULL;
+fn create_pipeline_cache(device: &Device) -> vk::PipelineCache {
+    println!("[VulkanContext] Creating pipeline cache");
+    let create_info =
+        vk::PipelineCacheCreateInfo::builder().flags(vk::PipelineCacheCreateFlags::empty());
 
-    // VK(device->vkCreatePipelineCache(
-    //     device->device, &pipelineCacheCreateInfo, VK_ALLOCATOR, &context->pipelineCache));
-    todo!()
+    let pipeline_cache = unsafe {
+        device
+            .create_pipeline_cache(&create_info, None)
+            .expect("Unable to create pipeline cache")
+    };
+
+    println!("[VulkanContext] Done");
+
+    return pipeline_cache;
 }
 
 fn create_system_vulkan(instance: &Instance, physical_device: vk::PhysicalDevice, device: &Device) {
