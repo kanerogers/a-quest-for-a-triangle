@@ -541,7 +541,7 @@ fn create_swap_chain (
     logical_device: &Device,
     java: &ovrJava,
 ) -> (khr::Swapchain, vk::SwapchainKHR, vk::Format, vk::Extent2D) {
-        let colour_swap_chain = unsafe { ColourSwapChain::init(java) };
+        let colour_swap_chain = unsafe { ColourSwapChain::new(java) };
         todo!();
 }
 

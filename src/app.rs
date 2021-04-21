@@ -24,7 +24,7 @@ pub struct App {
 
 impl App {
     pub fn new(java: ovrJava) -> Self {
-        let renderer = unsafe { VulkanRenderer::new() };
+        let renderer = unsafe { VulkanRenderer::new(&java) };
         Self {
             java,
             renderer,

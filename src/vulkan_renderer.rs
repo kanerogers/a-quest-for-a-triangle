@@ -1,12 +1,12 @@
 use std::ptr::NonNull;
 
-use crate::vulkan_context::VulkanContext;
+use crate::{colour_swap_chain::ColourSwapChain, vulkan_context::VulkanContext};
 use ovr_mobile_sys::{
     helpers::{vrapi_DefaultLayerBlackProjection2, vrapi_DefaultLayerLoadingIcon2},
     ovrFrameFlags_::VRAPI_FRAME_FLAG_FLUSH,
     ovrFrameLayerFlags_::VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER,
-    ovrLayerHeader2, ovrMobile, ovrSubmitFrameDescription2_, vrapi_GetPredictedDisplayTime,
-    vrapi_GetPredictedTracking2, vrapi_SubmitFrame2,
+    ovrJava, ovrLayerHeader2, ovrMobile, ovrSubmitFrameDescription2_,
+    vrapi_GetPredictedDisplayTime, vrapi_GetPredictedTracking2, vrapi_SubmitFrame2,
 };
 
 pub struct VulkanRenderer {
@@ -21,8 +21,15 @@ pub struct VulkanRenderer {
 }
 
 impl VulkanRenderer {
-    pub unsafe fn new() -> Self {
+    pub unsafe fn new(java: &ovrJava) -> Self {
+        println!("[VulkanRenderer] Initialising renderer..");
         let context = VulkanContext::new();
+        let colour_swap_chains = (0..2)
+            .map(|_| ColourSwapChain::new(java))
+            .collect::<Vec<_>>();
+
+        println!("[VulkanRenderer] ..done!");
+
         Self {
             context,
             frame_index: 0,

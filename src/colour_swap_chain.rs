@@ -19,7 +19,8 @@ pub struct ColourSwapChain {
 }
 
 impl ColourSwapChain {
-    pub unsafe fn init(java: &ovrJava) -> ColourSwapChain {
+    pub unsafe fn new(java: &ovrJava) -> ColourSwapChain {
+        println!("[ColourSwapChain] Creating colour swap chain..");
         let width = vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH);
         let height = vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT);
         let levels = 1;
@@ -60,6 +61,8 @@ impl ColourSwapChain {
             fragment_density_textures.insert(i, *image);
             fragment_density_texture_sizes.insert(i, extent);
         }
+
+        println!("[ColourSwapChain] ..done!");
 
         ColourSwapChain {
             texture_swapchain: *texture_swapchain,
