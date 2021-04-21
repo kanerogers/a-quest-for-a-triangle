@@ -53,7 +53,7 @@ impl App {
         }
     }
     pub fn handle_vr_api_event(&mut self, event: ovrEventType) -> () {
-        println!("[VR_API_EVENTS] Polling VR API events..");
+        println!("[VR_API_EVENTS] Received VR event {:?}", event);
         match event {
             ovrEventType::VRAPI_EVENT_DATA_LOST => {}
             ovrEventType::VRAPI_EVENT_NONE => {}

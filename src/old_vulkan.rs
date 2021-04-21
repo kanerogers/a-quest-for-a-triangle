@@ -101,7 +101,7 @@ impl OldVulkanRenderer {
         let swap_chain_image_views = create_image_views(&mut swap_chain_images, format, &device);
 
         // Render Pass
-        let render_pass = create_render_pass(&device);
+        let render_pass = todo!();
         let (pipeline_layout, pipeline) = create_graphics_pipeline(&device, extent, render_pass);
 
         // Frame Buffer

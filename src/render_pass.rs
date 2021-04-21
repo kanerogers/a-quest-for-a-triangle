@@ -1,37 +1,43 @@
 use ash::{version::DeviceV1_0, vk, Device};
 use ovr_mobile_sys::ovrVector4f;
 
-pub enum RenderPassType {
-    Inline,
-    SecondaryCommandBuffers,
-}
-
 pub struct RenderPass {
-    pub render_pass_type: RenderPassType,
     pub render_pass: vk::RenderPass,
+    pub clear_color: ovrVector4f,
+    pub colour_format: vk::Format,
+    pub depth_format: vk::Format,
+    pub sample_count: vk::SampleCountFlags,
 }
 
 impl RenderPass {
     pub fn new(device: &Device) -> Self {
-        let render_pass = create_render_pass(device);
+        let colour_format = vk::Format::R8G8B8A8_UNORM;
+        let depth_format = vk::Format::D24_UNORM_S8_UINT;
+        let sample_count = vk::SampleCountFlags::TYPE_4;
+        let render_pass = create_render_pass(device, colour_format, depth_format, sample_count);
+        let clear_color = ovrVector4f {
+            x: 0.125,
+            y: 0.0,
+            z: 0.125,
+            w: 1.0,
+        };
         Self {
             render_pass,
-            render_pass_type: RenderPassType::Inline,
+            clear_color,
+            colour_format,
+            depth_format,
+            sample_count,
         }
     }
 }
 
-pub fn create_render_pass(device: &Device) -> vk::RenderPass {
-    println!("[RenderPass] Creating render pass");
-    let colour_format = vk::Format::R8G8B8A8_UNORM;
-    let depth_format = vk::Format::D24_UNORM_S8_UINT;
-    let sample_count = vk::SampleCountFlags::TYPE_4;
-    let clear_colour = ovrVector4f {
-        x: 0.125,
-        y: 0.0,
-        z: 0.125,
-        w: 1.0,
-    };
+pub fn create_render_pass(
+    device: &Device,
+    colour_format: vk::Format,
+    depth_format: vk::Format,
+    sample_count: vk::SampleCountFlags,
+) -> vk::RenderPass {
+    println!("[RenderPass] Creating render pass..");
 
     let color_attachment = vk::AttachmentDescription::builder()
         .format(colour_format)
@@ -43,7 +49,6 @@ pub fn create_render_pass(device: &Device) -> vk::RenderPass {
         .initial_layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
         .final_layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
         .build();
-    let color_attachments = [color_attachment];
     let color_attachment_ref = vk::AttachmentReference::builder()
         .attachment(0)
         .layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
@@ -58,7 +63,6 @@ pub fn create_render_pass(device: &Device) -> vk::RenderPass {
         .initial_layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
         .final_layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
         .build();
-    let resolve_attachments = [resolve_attachment];
     let resolve_attachment_ref = vk::AttachmentReference::builder()
         .attachment(1)
         .layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
@@ -75,12 +79,10 @@ pub fn create_render_pass(device: &Device) -> vk::RenderPass {
         .initial_layout(vk::ImageLayout::FRAGMENT_DENSITY_MAP_OPTIMAL_EXT)
         .final_layout(vk::ImageLayout::FRAGMENT_DENSITY_MAP_OPTIMAL_EXT)
         .build();
-    let depth_attachments = [depth_attachment];
     let depth_attachment_ref = vk::AttachmentReference::builder()
         .attachment(2)
         .layout(vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
         .build();
-    let depth_attachment_refs = [depth_attachment_ref];
 
     let fragment_density_attachment = vk::AttachmentDescription::builder()
         .format(vk::Format::R8G8_UNORM)
@@ -92,33 +94,41 @@ pub fn create_render_pass(device: &Device) -> vk::RenderPass {
         .initial_layout(vk::ImageLayout::FRAGMENT_DENSITY_MAP_OPTIMAL_EXT)
         .final_layout(vk::ImageLayout::FRAGMENT_DENSITY_MAP_OPTIMAL_EXT)
         .build();
-    let fragment_density_attachments = [fragment_density_attachment];
+
     let fragment_density_attachment_ref = vk::AttachmentReference::builder()
         .attachment(3)
         .layout(vk::ImageLayout::FRAGMENT_DENSITY_MAP_OPTIMAL_EXT)
         .build();
-    let fragment_density_attachment_refs = [fragment_density_attachment_ref];
 
     let subpass = vk::SubpassDescription::builder()
         .pipeline_bind_point(vk::PipelineBindPoint::GRAPHICS)
         .color_attachments(&color_attachment_refs)
+        .resolve_attachments(&resolve_attachment_refs)
+        .depth_stencil_attachment(&depth_attachment_ref)
         .build();
     let subpasses = [subpass];
 
-    let dependency = vk::SubpassDependency::builder()
-        .src_subpass(vk::SUBPASS_EXTERNAL)
-        .dst_subpass(0)
-        .src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
-        .src_access_mask(vk::AccessFlags::empty())
-        .dst_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
-        .dst_access_mask(vk::AccessFlags::COLOR_ATTACHMENT_WRITE)
-        .build();
-    let dependencies = [dependency];
+    let attachments = [
+        color_attachment,
+        resolve_attachment,
+        depth_attachment,
+        fragment_density_attachment,
+    ];
+
+    let view_mask = [0b00000011];
+    let mut multiview_create_info = vk::RenderPassMultiviewCreateInfo::builder()
+        .view_masks(&view_mask)
+        .correlation_masks(&view_mask);
+
+    let mut fragment_density_map_create_info =
+        vk::RenderPassFragmentDensityMapCreateInfoEXT::builder()
+            .fragment_density_map_attachment(fragment_density_attachment_ref);
 
     let render_pass_create_info = vk::RenderPassCreateInfo::builder()
-        .attachments(&color_attachments)
-        .subpasses(&subpasses)
-        .dependencies(&dependencies);
+        .attachments(&attachments)
+        .push_next(&mut multiview_create_info)
+        .push_next(&mut fragment_density_map_create_info)
+        .subpasses(&subpasses);
 
     let render_pass = unsafe {
         device
