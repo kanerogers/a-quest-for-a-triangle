@@ -21,6 +21,7 @@ impl RenderPass {
             z: 0.125,
             w: 1.0,
         };
+
         Self {
             render_pass,
             clear_color,

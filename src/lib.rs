@@ -1,17 +1,17 @@
 #![allow(non_snake_case)]
 mod app;
-mod colour_swap_chain;
+mod color_swap_chain;
 mod debug_messenger;
 mod device;
 mod eye_command_buffer;
 mod frame_buffer;
-mod old_vulkan;
 mod physical_device;
 mod queue_family_indices;
 mod render_pass;
 mod util;
 mod vulkan_context;
 mod vulkan_renderer;
+mod texture;
 
 mod lib {
     use crate::app::App;
@@ -42,7 +42,6 @@ mod lib {
 
         app.run();
 
-
         println!("Destroy requested! Bye for now!");
     }
 
@@ -60,5 +59,4 @@ mod lib {
         let result = unsafe { vrapi_Initialize(&parms) };
         println!("[INIT] Done. Result: {:?}", result);
     }
-
 }

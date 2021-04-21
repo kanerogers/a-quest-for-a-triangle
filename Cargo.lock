@@ -5,6 +5,7 @@ name = "a_quest_for_triangle"
 version = "0.1.0"
 dependencies = [
  "ash",
+ "bitflags",
  "byte-slice-cast",
  "env_logger",
  "futures",
@@ -78,6 +79,12 @@ dependencies = [
  "object",
  "rustc-demangle",
 ]
+
+[[package]]
+name = "bitflags"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 
 [[package]]
 name = "byte-slice-cast"

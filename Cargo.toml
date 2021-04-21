@@ -15,6 +15,7 @@ futures = "0.3"
 jni = "0.17"
 log = "0.4"
 #ovr-mobile-sys = {git = "https://github.com/kanerogers/ovr-mobile-sys"}
+bitflags = "1.2"
 ovr-mobile-sys = {path = "../ovr-mobile-sys"}
 
 [package.metadata.android]

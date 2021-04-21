@@ -1,38 +1,34 @@
 use ash::vk::{self, Handle};
 use ovr_mobile_sys::{
-    ovrJava,
-    ovrSystemProperty_::{
-        VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH,
-    },
-    ovrTextureSwapChain, vrapi_CreateTextureSwapChain3, vrapi_GetSystemPropertyInt,
+    ovrTextureSwapChain, vrapi_CreateTextureSwapChain3,
     vrapi_GetTextureSwapChainBufferFoveationVulkan, vrapi_GetTextureSwapChainBufferVulkan,
     vrapi_GetTextureSwapChainLength, VkImage,
 };
 use std::ptr::NonNull;
 
 pub struct ColourSwapChain {
-    texture_swapchain: ovrTextureSwapChain,
-    swapchain_length: i32,
-    colour_textures: Vec<vk::Image>,
-    fragment_density_textures: Vec<vk::Image>,
-    fragment_density_texture_sizes: Vec<vk::Extent2D>,
+    pub texture_swapchain: ovrTextureSwapChain,
+    pub swapchain_length: i32,
+    pub colour_textures: Vec<vk::Image>,
+    pub fragment_density_textures: Vec<vk::Image>,
+    pub fragment_density_texture_sizes: Vec<vk::Extent2D>,
+    pub format: vk::Format,
 }
 
 impl ColourSwapChain {
-    pub unsafe fn new(java: &ovrJava) -> ColourSwapChain {
+    pub unsafe fn new(width: i32, height: i32) -> ColourSwapChain {
         println!("[ColourSwapChain] Creating colour swap chain..");
 
         // Get required parameters for texture swapchain
-        let width = vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH);
-        let height = vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT);
         let levels = 1;
         let buffer_count = 3;
+        let format = vk::Format::R8G8B8A8_UNORM;
 
         // Create texture swapchain
         println!("[ColourSwapChain] Creating texture swap chain..");
         let texture_swapchain = vrapi_CreateTextureSwapChain3(
             ovr_mobile_sys::ovrTextureType::VRAPI_TEXTURE_TYPE_2D_ARRAY,
-            vk::Format::R8G8B8A8_UNORM.as_raw() as i64,
+            format.as_raw() as i64,
             width,
             height,
             levels,
@@ -79,6 +75,7 @@ impl ColourSwapChain {
         println!("[ColourSwapChain] ..done! ColourSwapchain created!");
 
         ColourSwapChain {
+            format,
             texture_swapchain: *texture_swapchain,
             swapchain_length,
             colour_textures,

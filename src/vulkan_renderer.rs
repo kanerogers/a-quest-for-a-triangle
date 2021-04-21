@@ -1,15 +1,19 @@
-use std::ptr::NonNull;
-
 use crate::{
-    colour_swap_chain::ColourSwapChain, render_pass::RenderPass, vulkan_context::VulkanContext,
+    color_swap_chain::ColourSwapChain, frame_buffer::FrameBuffer, render_pass::RenderPass,
+    vulkan_context::VulkanContext,
 };
 use ovr_mobile_sys::{
     helpers::{vrapi_DefaultLayerBlackProjection2, vrapi_DefaultLayerLoadingIcon2},
     ovrFrameFlags_::VRAPI_FRAME_FLAG_FLUSH,
     ovrFrameLayerFlags_::VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER,
     ovrJava, ovrLayerHeader2, ovrMobile, ovrSubmitFrameDescription2_,
-    vrapi_GetPredictedDisplayTime, vrapi_GetPredictedTracking2, vrapi_SubmitFrame2,
+    ovrSystemProperty_::{
+        VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH,
+    },
+    vrapi_GetPredictedDisplayTime, vrapi_GetPredictedTracking2, vrapi_GetSystemPropertyInt,
+    vrapi_SubmitFrame2,
 };
+use std::ptr::NonNull;
 
 pub struct VulkanRenderer {
     pub context: VulkanContext,
@@ -26,11 +30,18 @@ impl VulkanRenderer {
     pub unsafe fn new(java: &ovrJava) -> Self {
         println!("[VulkanRenderer] Initialising renderer..");
         let context = VulkanContext::new();
+        let width = vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH);
+        let height = vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT);
+
         let colour_swap_chains = (0..2)
-            .map(|_| ColourSwapChain::new(java))
+            .map(|_| ColourSwapChain::new(width, height))
             .collect::<Vec<_>>();
 
         let render_pass = RenderPass::new(&context.device);
+        let framebuffers = colour_swap_chains
+            .iter()
+            .map(|c| FrameBuffer::new(c, &render_pass, width, height))
+            .collect::<Vec<_>>();
 
         println!("[VulkanRenderer] ..done!");
 
