@@ -16,14 +16,14 @@ use crate::{
     util::cstrings_to_raw,
 };
 
-pub struct Context {
+pub struct VulkanContext {
     pub entry: Entry,
     pub instance: Instance,
     pub device: Device,
     pub physical_device: vk::PhysicalDevice,
 }
 
-impl Context {
+impl VulkanContext {
     pub unsafe fn new() -> Self {
         let (instance, entry) = vulkan_init();
         let required_device_extensions = get_required_device_extensions();
@@ -58,13 +58,13 @@ fn create_system_vulkan(instance: &Instance, physical_device: vk::PhysicalDevice
         PhysicalDevice: vk_physical_device as *mut VkPhysicalDevice_T,
         Device: vk_device as *mut VkDevice_T,
     };
-    println!("[VulkanRenderer] Calling vrapi_CreateSystemVulkan..");
+    println!("[VulkanContext] Calling vrapi_CreateSystemVulkan..");
     unsafe { vrapi_CreateSystemVulkan(&mut system_info) };
-    println!("[VulkanRenderer] ..done. VulkanRenderer initialised.");
+    println!("[VulkanContext] ..done. VulkanRenderer initialised.");
 }
 
 unsafe fn vulkan_init() -> (Instance, Entry) {
-    println!("[VulkanRenderer] Initialising Vulkan..");
+    println!("[VulkanContext] Initialising Vulkan..");
     let app_name = CString::new("A Quest for a Triangle").unwrap();
     let entry = Entry::new().unwrap();
     let layer_names = get_layer_names(&entry);
@@ -85,7 +85,7 @@ unsafe fn vulkan_init() -> (Instance, Entry) {
     let instance = entry.create_instance(&create_info, None).unwrap();
 
     let (debug_utils, messenger) = setup_debug_messenger(&entry, &instance, &debug_messenger_info);
-    println!("[VulkanRenderer] ..done");
+    println!("[VulkanContext] ..done");
 
     (instance, entry)
 }

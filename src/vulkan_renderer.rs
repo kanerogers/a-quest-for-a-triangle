@@ -1,7 +1,7 @@
-use crate::context::Context;
+use crate::vulkan_context::VulkanContext;
 
 pub struct VulkanRenderer {
-    context: Context,
+    context: VulkanContext,
     // pub render_pass_single_view: RenderPass,
     // pub eye_command_buffers: Vec<EyeCommandBuffer>,
     // pub frame_buffers: Vec<FrameBuffer>,
@@ -12,7 +12,7 @@ pub struct VulkanRenderer {
 
 impl VulkanRenderer {
     pub unsafe fn new() -> Self {
-        let context = Context::new();
+        let context = VulkanContext::new();
         Self {
             context,
             // render_pass_single_view,

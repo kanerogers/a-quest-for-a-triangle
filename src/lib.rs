@@ -1,7 +1,7 @@
 #![allow(non_snake_case, unused_variables, dead_code)]
 mod app;
 mod colour_swap_chain;
-mod context;
+mod vulkan_context;
 mod debug_messenger;
 mod device;
 mod eye_command_buffer;
