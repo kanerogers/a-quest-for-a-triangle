@@ -109,6 +109,12 @@ impl Texture {
             sampler,
         }
     }
+
+    pub fn change_usage(&self, context: &VulkanContext, usage: TextureUsageFlags) -> () {
+        // create setup_command buffer
+        
+        // flush buffer
+    }
 }
 
 fn create_sampler(
