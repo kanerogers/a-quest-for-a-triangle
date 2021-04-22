@@ -12,9 +12,9 @@ use std::ptr::NonNull;
 pub struct TextureSwapChain {
     pub handle: ovrTextureSwapChain,
     pub length: i32,
-    pub images: Vec<vk::Image>,
-    pub fragment_density_textures: Vec<vk::Image>,
-    pub fragment_density_texture_sizes: Vec<vk::Extent2D>,
+    pub render_images: Vec<vk::Image>,
+    pub ffr_images: Vec<vk::Image>,
+    pub ffr_image_sizes: Vec<vk::Extent2D>,
     pub format: vk::Format,
 }
 
@@ -45,31 +45,32 @@ impl TextureSwapChain {
         let swapchain_length = vrapi_GetTextureSwapChainLength(swapchain_handle);
         assert_eq!(images_count, swapchain_length);
 
-        let mut images = Vec::with_capacity(swapchain_length as usize);
+        // These are the images that will be ultimately rendered to the eyes.
+        let mut render_images = Vec::with_capacity(swapchain_length as usize);
 
         // These images are used for Fixed Foveated Rendering (FFR)
-        let mut fragment_density_images = Vec::with_capacity(swapchain_length as usize);
-        let mut fragment_density_image_sizes = Vec::with_capacity(swapchain_length as usize);
+        let mut ffr_images = Vec::with_capacity(swapchain_length as usize);
+        let mut ffr_image_sizes = Vec::with_capacity(swapchain_length as usize);
 
         // Retrieve images from the newly created swapchain
         for i in 0..swapchain_length as usize {
             println!("[TextureSwapChain] Getting SwapChain images..");
             let image_handle = vrapi_GetTextureSwapChainBufferVulkan(swapchain_handle, i as i32);
-            images.push(vk::Image::from_raw(image_handle as u64));
+            render_images.push(vk::Image::from_raw(image_handle as u64));
             println!("[TextureSwapChain] ..done!");
 
-            let mut fragment_density_image = vk::Image::null();
-            let ptr = NonNull::new(&mut fragment_density_image).unwrap().as_ptr();
+            let mut ffr_image = vk::Image::null();
+            let ptr = NonNull::new(&mut ffr_image).unwrap().as_ptr();
             let ptr = NonNull::new(ptr).unwrap().as_ptr() as *mut VkImage;
-            let mut extent = vk::Extent2D::default();
+            let mut ffr_image_size = vk::Extent2D::default();
 
             println!("[TextureSwapChain] Getting fragment density image..");
             let result = vrapi_GetTextureSwapChainBufferFoveationVulkan(
                 swapchain_handle,
                 i as i32,
                 ptr,
-                &mut extent.height,
-                &mut extent.width,
+                &mut ffr_image_size.height,
+                &mut ffr_image_size.width,
             );
 
             println!("[TextureSwapChain] ..done!");
@@ -77,8 +78,8 @@ impl TextureSwapChain {
                 continue;
             }
 
-            fragment_density_images.push(fragment_density_image.to_owned());
-            fragment_density_image_sizes.push(extent);
+            ffr_images.push(ffr_image.to_owned());
+            ffr_image_sizes.push(ffr_image_size);
         }
 
         println!("[TextureSwapChain] All done! TextureSwapChain created!");
@@ -87,9 +88,9 @@ impl TextureSwapChain {
             format,
             handle: *swapchain_handle,
             length: swapchain_length,
-            images,
-            fragment_density_textures: fragment_density_images,
-            fragment_density_texture_sizes: fragment_density_image_sizes,
+            render_images,
+            ffr_images,
+            ffr_image_sizes,
         }
     }
 }

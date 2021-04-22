@@ -1,5 +1,5 @@
 use crate::{
-    texture_swap_chain::TextureSwapChain, frame_buffer::FrameBuffer, render_pass::RenderPass,
+    frame_buffer::FrameBuffer, render_pass::RenderPass, texture_swap_chain::TextureSwapChain,
     vulkan_context::VulkanContext,
 };
 use ovr_mobile_sys::{
@@ -33,14 +33,14 @@ impl VulkanRenderer {
         let width = vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH);
         let height = vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT);
 
-        let colour_swap_chains = (0..2)
+        let texture_swap_chains = (0..2)
             .map(|_| TextureSwapChain::new(width, height))
             .collect::<Vec<_>>();
 
         let render_pass = RenderPass::new(&context.device);
-        let frame_buffers = colour_swap_chains
+        let frame_buffers = texture_swap_chains
             .iter()
-            .map(|c| FrameBuffer::new(c, &context, width, height))
+            .map(|t| FrameBuffer::new(t, &context, width, height))
             .collect::<Vec<_>>();
 
         println!("[VulkanRenderer] ..done!");
