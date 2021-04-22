@@ -61,6 +61,7 @@ impl Texture {
         image: &vk::Image,
         context: &VulkanContext,
     ) -> Self {
+        println!("Creating texture for {:?}", image);
         // Get the appropriate image layout for this texture.
         let image_layout = if usage == TextureUsageFlags::OVR_TEXTURE_USAGE_SAMPLED {
             vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL
@@ -112,7 +113,7 @@ impl Texture {
 
     pub fn change_usage(&self, context: &VulkanContext, usage: TextureUsageFlags) -> () {
         // create setup_command buffer
-        
+
         // flush buffer
     }
 }

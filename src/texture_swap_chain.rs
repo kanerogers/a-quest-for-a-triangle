@@ -30,7 +30,7 @@ impl TextureSwapChain {
 
         // This handle is an opaque type provided by VrApi.
         let swapchain_handle = vrapi_CreateTextureSwapChain3(
-            ovr_mobile_sys::ovrTextureType::VRAPI_TEXTURE_TYPE_2D_ARRAY,
+            ovr_mobile_sys::ovrTextureType::VRAPI_TEXTURE_TYPE_2D,
             format.as_raw() as i64,
             width,
             height,

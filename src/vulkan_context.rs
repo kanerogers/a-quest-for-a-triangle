@@ -81,7 +81,7 @@ impl VulkanContext {
             .base_mip_level(0)
             .level_count(1)
             .base_array_layer(0)
-            .layer_count(2)
+            .layer_count(1)
             .build();
 
         let image_memory_barrier = vk::ImageMemoryBarrier::builder()

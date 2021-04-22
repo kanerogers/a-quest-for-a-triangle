@@ -38,12 +38,13 @@ impl VulkanRenderer {
             .collect::<Vec<_>>();
 
         let render_pass = RenderPass::new(&context.device);
+        println!("[VulkanRenderer] Creating frame buffers..");
         let frame_buffers = texture_swap_chains
             .iter()
             .map(|t| FrameBuffer::new(t, &render_pass, &context, width, height))
             .collect::<Vec<_>>();
 
-        println!("[VulkanRenderer] ..done!");
+        println!("[VulkanRenderer] ..done! Renderer initialized");
 
         Self {
             context,
