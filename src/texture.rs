@@ -17,12 +17,14 @@ bitflags! {
     }
 }
 
+#[derive(Clone, Debug, Copy, PartialEq)]
 pub enum TextureWrapMode {
     OvrTextureWrapModeRepeat,
     OvrTextureWrapModeClampToEdge,
     OvrTextureWrapModeClampToBorder,
 }
 
+#[derive(Clone, Debug, Copy, PartialEq)]
 pub enum TextureFilter {
     OvrTextureFilterNearest,
     OvrTextureFilterLinear,
@@ -40,7 +42,7 @@ pub struct Texture {
     pub usage_flags: TextureUsageFlags,
     pub wrap_mode: TextureWrapMode,
     pub filter: TextureFilter,
-    pub max_aniostropy: f32,
+    pub max_anisotropy: f32,
     pub color_format: vk::Format,
     pub image_layout: vk::ImageLayout,
     pub image: vk::Image,
@@ -59,23 +61,27 @@ impl Texture {
     ) -> Self {
         context.create_image_memory_barrier(image);
         let view = create_image_view(context, image, color_format);
+        let wrap_mode = TextureWrapMode::OvrTextureWrapModeClampToBorder;
+        let filter = TextureFilter::OvrTextureFilterLinear;
+        let max_anisotropy = 1.0;
+        let mip_count = 1;
+        let sampler = create_sampler(context, wrap_mode, filter, max_anisotropy, mip_count);
         let memory = vk::DeviceMemory::null();
-        let sampler = vk::Sampler::null();
 
         Self {
             width,
             height,
             depth: 1,
             layer_count: 2,
-            mip_count: 1,
+            mip_count,
             sample_count: vk::SampleCountFlags::TYPE_1,
             usage: TextureUsageFlags::OVR_TEXTURE_USAGE_SAMPLED,
             usage_flags: TextureUsageFlags::OVR_TEXTURE_USAGE_COLOR_ATTACHMENT
                 | TextureUsageFlags::OVR_TEXTURE_USAGE_SAMPLED
                 | TextureUsageFlags::OVR_TEXTURE_USAGE_STORAGE,
-            wrap_mode: TextureWrapMode::OvrTextureWrapModeClampToBorder,
-            filter: TextureFilter::OvrTextureFilterLinear,
-            max_aniostropy: 1.0,
+            max_anisotropy,
+            wrap_mode,
+            filter,
             color_format,
             image_layout: vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
             image: *image,
@@ -83,6 +89,57 @@ impl Texture {
             view,
             sampler,
         }
+    }
+}
+
+fn create_sampler(
+    context: &VulkanContext,
+    wrap_mode: TextureWrapMode,
+    filter: TextureFilter,
+    max_anisotropy: f32,
+    mip_count: i32,
+) -> vk::Sampler {
+    let mipmap_mode = if filter == TextureFilter::OvrTextureFilterNearest {
+        vk::SamplerMipmapMode::NEAREST
+    } else {
+        vk::SamplerMipmapMode::LINEAR
+    };
+
+    let address_mode = if wrap_mode == TextureWrapMode::OvrTextureWrapModeClampToEdge {
+        vk::SamplerAddressMode::CLAMP_TO_EDGE
+    } else if wrap_mode == TextureWrapMode::OvrTextureWrapModeClampToBorder {
+        vk::SamplerAddressMode::CLAMP_TO_BORDER
+    } else {
+        vk::SamplerAddressMode::REPEAT
+    };
+
+    let mag_filter = if filter == TextureFilter::OvrTextureFilterNearest {
+        vk::Filter::NEAREST
+    } else {
+        vk::Filter::LINEAR
+    };
+
+    let create_info = vk::SamplerCreateInfo::builder()
+        .mag_filter(mag_filter)
+        .min_filter(mag_filter)
+        .mipmap_mode(mipmap_mode)
+        .address_mode_u(address_mode)
+        .address_mode_v(address_mode)
+        .address_mode_w(address_mode)
+        .anisotropy_enable(false)
+        .max_anisotropy(max_anisotropy)
+        .compare_enable(false)
+        .compare_op(vk::CompareOp::NEVER)
+        .min_lod(0.0)
+        .max_lod(mip_count as f32)
+        .border_color(vk::BorderColor::FLOAT_OPAQUE_BLACK)
+        .unnormalized_coordinates(false);
+
+    unsafe {
+        context
+            .device
+            .create_sampler(&create_info, None)
+            .expect("Unable to create sampler")
     }
 }
 

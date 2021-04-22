@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 mod app;
-mod color_swap_chain;
+mod texture_swap_chain;
 mod debug_messenger;
 mod device;
 mod eye_command_buffer;

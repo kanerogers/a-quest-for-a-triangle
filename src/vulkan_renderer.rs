@@ -1,5 +1,5 @@
 use crate::{
-    color_swap_chain::ColourSwapChain, frame_buffer::FrameBuffer, render_pass::RenderPass,
+    texture_swap_chain::TextureSwapChain, frame_buffer::FrameBuffer, render_pass::RenderPass,
     vulkan_context::VulkanContext,
 };
 use ovr_mobile_sys::{
@@ -20,7 +20,7 @@ pub struct VulkanRenderer {
     pub frame_index: i64,
     pub render_pass: RenderPass,
     // pub eye_command_buffers: Vec<EyeCommandBuffer>,
-    // pub frame_buffers: Vec<FrameBuffer>,
+    pub frame_buffers: Vec<FrameBuffer>,
     // pub view_matrix: Vec<ovrMatrix4f>,
     // pub projection_matrix: Vec<ovrMatrix4f>,
     // pub num_eyes: usize,
@@ -34,11 +34,11 @@ impl VulkanRenderer {
         let height = vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT);
 
         let colour_swap_chains = (0..2)
-            .map(|_| ColourSwapChain::new(width, height))
+            .map(|_| TextureSwapChain::new(width, height))
             .collect::<Vec<_>>();
 
         let render_pass = RenderPass::new(&context.device);
-        let framebuffers = colour_swap_chains
+        let frame_buffers = colour_swap_chains
             .iter()
             .map(|c| FrameBuffer::new(c, &context, width, height))
             .collect::<Vec<_>>();
@@ -51,7 +51,7 @@ impl VulkanRenderer {
             render_pass,
             // render_pass_single_view,
             // eye_command_buffers,
-            // frame_buffers,
+            frame_buffers,
             // view_matrix,
             // projection_matrix,
             // num_eyes,
