@@ -68,7 +68,12 @@ impl VulkanContext {
         }
     }
 
-    pub fn create_image_memory_barrier(&self, image: &vk::Image) {
+    pub fn create_image_memory_barrier(
+        &self,
+        image: &vk::Image,
+        dst_access_mask: vk::AccessFlags,
+        new_layout: vk::ImageLayout,
+    ) {
         let command_buffer = self.create_setup_command_buffer();
 
         let subresource_range = vk::ImageSubresourceRange::builder()
@@ -81,9 +86,9 @@ impl VulkanContext {
 
         let image_memory_barrier = vk::ImageMemoryBarrier::builder()
             .src_access_mask(vk::AccessFlags::empty())
-            .dst_access_mask(vk::AccessFlags::SHADER_READ)
+            .dst_access_mask(dst_access_mask)
             .old_layout(vk::ImageLayout::UNDEFINED)
-            .new_layout(vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL)
+            .new_layout(new_layout)
             .image(*image)
             .subresource_range(subresource_range)
             .build();
@@ -107,6 +112,7 @@ impl VulkanContext {
 
         self.flush_setup_command_buffer(command_buffer);
     }
+
     fn create_setup_command_buffer(&self) -> vk::CommandBuffer {
         let allocate_info = vk::CommandBufferAllocateInfo::builder()
             .command_pool(self.command_pool)

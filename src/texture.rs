@@ -31,6 +31,7 @@ pub enum TextureFilter {
     OvrTextureFilterBilinear,
 }
 
+// A texture is an image, or part of an image that will be rendered to the eyes.
 pub struct Texture {
     pub width: i32,
     pub height: i32,
@@ -56,10 +57,28 @@ impl Texture {
         width: i32,
         height: i32,
         color_format: vk::Format,
+        usage: TextureUsageFlags,
         image: &vk::Image,
         context: &VulkanContext,
     ) -> Self {
-        context.create_image_memory_barrier(image);
+        // Get the appropriate image layout for this texture.
+        let image_layout = if usage == TextureUsageFlags::OVR_TEXTURE_USAGE_SAMPLED {
+            vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL
+        } else {
+            vk::ImageLayout::FRAGMENT_DENSITY_MAP_OPTIMAL_EXT
+        };
+
+        // Create an image memory barrier because.. ah.. reasons.
+        // dst_flags are different between different texture types
+        let dst_flags = if usage == TextureUsageFlags::OVR_TEXTURE_USAGE_SAMPLED {
+            vk::AccessFlags::SHADER_READ
+        } else {
+            vk::AccessFlags::FRAGMENT_DENSITY_MAP_READ_EXT
+        };
+
+        context.create_image_memory_barrier(image, dst_flags, image_layout);
+
+        // Great! Now create an image view.
         let view = create_image_view(context, image, color_format);
         let wrap_mode = TextureWrapMode::OvrTextureWrapModeClampToBorder;
         let filter = TextureFilter::OvrTextureFilterLinear;
@@ -75,7 +94,7 @@ impl Texture {
             layer_count: 2,
             mip_count,
             sample_count: vk::SampleCountFlags::TYPE_1,
-            usage: TextureUsageFlags::OVR_TEXTURE_USAGE_SAMPLED,
+            usage,
             usage_flags: TextureUsageFlags::OVR_TEXTURE_USAGE_COLOR_ATTACHMENT
                 | TextureUsageFlags::OVR_TEXTURE_USAGE_SAMPLED
                 | TextureUsageFlags::OVR_TEXTURE_USAGE_STORAGE,
@@ -83,7 +102,7 @@ impl Texture {
             wrap_mode,
             filter,
             color_format,
-            image_layout: vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+            image_layout,
             image: *image,
             memory,
             view,
