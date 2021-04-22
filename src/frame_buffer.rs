@@ -1,7 +1,8 @@
 use ash::vk;
 use ovr_mobile_sys::ovrTextureSwapChain;
 
-use crate::{color_swap_chain::ColourSwapChain, render_pass::RenderPass, texture::Texture};
+use crate::vulkan_context::VulkanContext;
+use crate::{color_swap_chain::ColourSwapChain, texture::Texture};
 
 pub struct FrameBuffer {
     pub width: i32,
@@ -19,7 +20,7 @@ pub struct FrameBuffer {
 impl FrameBuffer {
     pub fn new(
         color_swap_chain: &ColourSwapChain,
-        render_pass: &RenderPass,
+        context: &VulkanContext,
         width: i32,
         height: i32,
     ) -> Self {
@@ -28,8 +29,9 @@ impl FrameBuffer {
         let colour_textures = color_swap_chain
             .colour_textures
             .iter()
-            .map(|i| Texture::new(width, height, format, i.clone()))
+            .map(|i| Texture::new(width, height, format, i, context))
             .collect::<Vec<_>>();
+
         let mut fragment_density_textures = Vec::new();
         let mut framebuffers = Vec::new();
 

@@ -40,7 +40,7 @@ impl VulkanRenderer {
         let render_pass = RenderPass::new(&context.device);
         let framebuffers = colour_swap_chains
             .iter()
-            .map(|c| FrameBuffer::new(c, &render_pass, width, height))
+            .map(|c| FrameBuffer::new(c, &context, width, height))
             .collect::<Vec<_>>();
 
         println!("[VulkanRenderer] ..done!");

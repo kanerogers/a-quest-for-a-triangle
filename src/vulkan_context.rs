@@ -67,6 +67,95 @@ impl VulkanContext {
             pipeline_cache,
         }
     }
+
+    pub fn create_image_memory_barrier(&self, image: &vk::Image) {
+        let command_buffer = self.create_setup_command_buffer();
+
+        let subresource_range = vk::ImageSubresourceRange::builder()
+            .aspect_mask(vk::ImageAspectFlags::COLOR)
+            .base_mip_level(0)
+            .level_count(1)
+            .base_array_layer(0)
+            .layer_count(2)
+            .build();
+
+        let image_memory_barrier = vk::ImageMemoryBarrier::builder()
+            .src_access_mask(vk::AccessFlags::empty())
+            .dst_access_mask(vk::AccessFlags::SHADER_READ)
+            .old_layout(vk::ImageLayout::UNDEFINED)
+            .new_layout(vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL)
+            .image(*image)
+            .subresource_range(subresource_range)
+            .build();
+
+        let src_stage_mask = vk::PipelineStageFlags::TOP_OF_PIPE;
+        let dst_stage_mask = vk::PipelineStageFlags::ALL_GRAPHICS;
+        let dependency_flags = vk::DependencyFlags::empty();
+        let image_memory_barriers = [image_memory_barrier];
+
+        unsafe {
+            self.device.cmd_pipeline_barrier(
+                command_buffer,
+                src_stage_mask,
+                dst_stage_mask,
+                dependency_flags,
+                &[],
+                &[],
+                &image_memory_barriers,
+            )
+        };
+
+        self.flush_setup_command_buffer(command_buffer);
+    }
+    fn create_setup_command_buffer(&self) -> vk::CommandBuffer {
+        let allocate_info = vk::CommandBufferAllocateInfo::builder()
+            .command_pool(self.command_pool)
+            .level(vk::CommandBufferLevel::PRIMARY)
+            .command_buffer_count(1);
+
+        let buffer = unsafe {
+            self.device
+                .allocate_command_buffers(&allocate_info)
+                .expect("Unable to allocate command buffer")
+                .pop()
+                .unwrap()
+        };
+
+        let begin_info = vk::CommandBufferBeginInfo::builder()
+            .flags(vk::CommandBufferUsageFlags::ONE_TIME_SUBMIT);
+
+        unsafe {
+            self.device
+                .begin_command_buffer(buffer, &begin_info)
+                .expect("Unable to begin command buffer")
+        };
+
+        return buffer;
+    }
+
+    fn flush_setup_command_buffer(&self, command_buffer: vk::CommandBuffer) {
+        unsafe {
+            self.device
+                .end_command_buffer(command_buffer)
+                .expect("Unable to end command buffer")
+        };
+        let command_buffers = &[command_buffer];
+
+        let submit_info = vk::SubmitInfo::builder()
+            .command_buffers(command_buffers)
+            .build();
+
+        unsafe {
+            self.device
+                .queue_submit(self.graphics_queue, &[submit_info], vk::Fence::null())
+                .expect("Failed to submit queue");
+            self.device
+                .queue_wait_idle(self.graphics_queue)
+                .expect("Failed to wait for queue to be idle");
+            self.device
+                .free_command_buffers(self.command_pool, command_buffers)
+        };
+    }
 }
 
 fn create_command_pool(device: &Device, queue_family_index: u32) -> vk::CommandPool {
