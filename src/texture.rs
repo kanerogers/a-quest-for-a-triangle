@@ -69,18 +69,19 @@ impl Texture {
             vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL
         };
 
-        // Create an image memory barrier because.. ah.. reasons.
+        // Change the image layout to the most optimal for this kind of texture.
         // dst_flags are different between different texture types
         let dst_flags = if usage == TextureUsageFlags::OVR_TEXTURE_USAGE_FRAG_DENSITY {
             vk::AccessFlags::FRAGMENT_DENSITY_MAP_READ_EXT
         } else {
             vk::AccessFlags::SHADER_READ
         };
+        let aspect_mask = vk::ImageAspectFlags::COLOR;
 
-        context.create_image_memory_barrier(image, dst_flags, image_layout);
+        context.change_image_layout(image, dst_flags, aspect_mask, image_layout);
 
         // Great! Now create an image view.
-        let view = create_image_view(context, image, color_format);
+        let view = context.create_image_view(image, color_format, aspect_mask);
         let sampler;
         let mip_count = 1;
         let max_anisotropy = 1.0;
@@ -174,38 +175,5 @@ fn create_sampler(
             .device
             .create_sampler(&create_info, None)
             .expect("Unable to create sampler")
-    }
-}
-
-fn create_image_view(
-    context: &VulkanContext,
-    image: &vk::Image,
-    color_format: vk::Format,
-) -> vk::ImageView {
-    let components = vk::ComponentMapping::builder()
-        .r(vk::ComponentSwizzle::R)
-        .g(vk::ComponentSwizzle::G)
-        .b(vk::ComponentSwizzle::B)
-        .a(vk::ComponentSwizzle::A)
-        .build();
-
-    let subresource_range = vk::ImageSubresourceRange::builder()
-        .aspect_mask(vk::ImageAspectFlags::COLOR)
-        .level_count(1)
-        .layer_count(2)
-        .build();
-
-    let create_info = vk::ImageViewCreateInfo::builder()
-        .image(*image)
-        .view_type(vk::ImageViewType::TYPE_2D_ARRAY)
-        .format(color_format)
-        .components(components)
-        .subresource_range(subresource_range);
-
-    unsafe {
-        context
-            .device
-            .create_image_view(&create_info, None)
-            .expect("Unable to create image view")
     }
 }

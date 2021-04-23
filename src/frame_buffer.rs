@@ -41,7 +41,10 @@ impl FrameBuffer {
 
         let render_usage = TextureUsageFlags::OVR_TEXTURE_USAGE_COLOR_ATTACHMENT;
         let render_format = render_pass.colour_format;
-        let render_image = context.create_image(width, height, render_format);
+        let render_usage_flags = vk::ImageUsageFlags::COLOR_ATTACHMENT
+            | vk::ImageUsageFlags::TRANSIENT_ATTACHMENT
+            | vk::ImageUsageFlags::INPUT_ATTACHMENT;
+        let render_image = context.create_image(width, height, render_format, render_usage_flags);
         let render_texture =
             Texture::new(width, height, format, render_usage, &render_image, context);
 

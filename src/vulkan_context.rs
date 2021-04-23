@@ -68,16 +68,17 @@ impl VulkanContext {
         }
     }
 
-    pub fn create_image_memory_barrier(
+    pub fn change_image_layout(
         &self,
         image: &vk::Image,
         dst_access_mask: vk::AccessFlags,
+        aspect_mask: vk::ImageAspectFlags,
         new_layout: vk::ImageLayout,
     ) {
         let command_buffer = self.create_setup_command_buffer();
 
         let subresource_range = vk::ImageSubresourceRange::builder()
-            .aspect_mask(vk::ImageAspectFlags::COLOR)
+            .aspect_mask(aspect_mask)
             .base_mip_level(0)
             .level_count(1)
             .base_array_layer(0)
@@ -112,24 +113,24 @@ impl VulkanContext {
 
         self.flush_setup_command_buffer(command_buffer);
     }
-    pub fn create_image(&self, width: i32, height: i32, format: vk::Format) -> vk::Image {
+
+    pub fn create_image(
+        &self,
+        width: i32,
+        height: i32,
+        format: vk::Format,
+        usage: vk::ImageUsageFlags,
+    ) -> vk::Image {
         let device = &self.device;
-        println!("[FrameBuffer] Creating render image");
+        println!("[VulkanContext] Creating image..");
         let face_count = 1;
         let format_properties = unsafe {
             self.instance
                 .get_physical_device_format_properties(self.physical_device, format)
         };
 
-        assert!(format_properties
-            .optimal_tiling_features
-            .contains(vk::FormatFeatureFlags::COLOR_ATTACHMENT));
-
         let num_storage_levels = 1;
         let array_layers_count = face_count;
-        let usage = vk::ImageUsageFlags::COLOR_ATTACHMENT
-            | vk::ImageUsageFlags::TRANSIENT_ATTACHMENT
-            | vk::ImageUsageFlags::INPUT_ATTACHMENT;
         let sample_count = vk::SampleCountFlags::TYPE_4;
         let extent = vk::Extent3D::builder()
             .width(width as u32)
@@ -164,21 +165,54 @@ impl VulkanContext {
             .allocation_size(allocation_size)
             .memory_type_index(memory_type_index);
 
-        println!("[FrameBuffer] Creating device memory..");
+        println!("[VulkanContext] Creating device memory..");
         let device_memory = unsafe {
             device
                 .allocate_memory(&memory_allocate_info, None)
                 .expect("Unable to allocate memory")
         };
-        println!("[FrameBuffer] ..done. Binding memory..");
+        println!("[VulkanContext] ..done. Binding memory..");
         unsafe {
             device
                 .bind_image_memory(image, device_memory, 0)
                 .expect("Unable to bind image memory")
         };
 
-        println!("[FrameBuffer] ..done. created render image: {:?}", image);
+        println!("[VulkanContext] ..done. created image: {:?}", image);
         image
+    }
+
+    pub fn create_image_view(
+        &self,
+        image: &vk::Image,
+        color_format: vk::Format,
+        aspect_mask: vk::ImageAspectFlags,
+    ) -> vk::ImageView {
+        let components = vk::ComponentMapping::builder()
+            .r(vk::ComponentSwizzle::R)
+            .g(vk::ComponentSwizzle::G)
+            .b(vk::ComponentSwizzle::B)
+            .a(vk::ComponentSwizzle::A)
+            .build();
+
+        let subresource_range = vk::ImageSubresourceRange::builder()
+            .aspect_mask(aspect_mask)
+            .level_count(1)
+            .layer_count(2)
+            .build();
+
+        let create_info = vk::ImageViewCreateInfo::builder()
+            .image(*image)
+            .view_type(vk::ImageViewType::TYPE_2D_ARRAY)
+            .format(color_format)
+            .components(components)
+            .subresource_range(subresource_range);
+
+        unsafe {
+            self.device
+                .create_image_view(&create_info, None)
+                .expect("Unable to create image view")
+        }
     }
 
     fn get_memory_type_index(
