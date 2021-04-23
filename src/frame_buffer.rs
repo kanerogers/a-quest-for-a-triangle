@@ -6,7 +6,7 @@ use ash::{
 };
 use ovr_mobile_sys::ovrTextureSwapChain;
 
-use crate::{render_pass::RenderPass, util::log_2, vulkan_context::VulkanContext};
+use crate::{render_pass::RenderPass, vulkan_context::VulkanContext};
 use crate::{
     texture::{Texture, TextureUsageFlags},
     texture_swap_chain::TextureSwapChain,
@@ -44,9 +44,9 @@ impl FrameBuffer {
             .collect::<Vec<_>>();
 
         let render_usage = TextureUsageFlags::OVR_TEXTURE_USAGE_COLOR_ATTACHMENT;
-        // let render_image = create_render_image(width, height, context, render_pass);
-        // let render_texture =
-        //     Texture::new(width, height, format, render_usage, &render_image, context);
+        let render_image = create_render_image(width, height, context, render_pass);
+        let render_texture =
+            Texture::new(width, height, format, render_usage, &render_image, context);
         // render_texture.change_usage(context, render_usage);
 
         let mut framebuffers = Vec::new();
@@ -74,18 +74,9 @@ fn create_render_image(
     context: &VulkanContext,
     render_pass: &RenderPass,
 ) -> vk::Image {
-    // (ovrVkTextureFormat)renderPass->internalColorFormat
-    // renderPass->sampleCount
-    // file_name = "data'"
-    // frameBuffer->Width,
-    // frameBuffer->Height,
-    // 1, : mip count
-    // isMultiview ? 2 : 1, : num layers
-    // OVR_TEXTURE_USAGE_COLOR_ATTACHMENT);
-    // depth = 0
+    println!("[FrameBuffer] Creating render image");
     let face_count = 1;
     let max_dimension = max(width, height);
-    let max_mip_levels = 1 + log_2(max_dimension);
     let format = render_pass.colour_format;
     let format_properties = unsafe {
         context
@@ -97,7 +88,7 @@ fn create_render_image(
         .optimal_tiling_features
         .contains(vk::FormatFeatureFlags::COLOR_ATTACHMENT));
 
-    let num_storage_levels = max_mip_levels;
+    let num_storage_levels = 1;
     let array_layers_count = face_count;
     let usage = vk::ImageUsageFlags::COLOR_ATTACHMENT;
     let sample_count = vk::SampleCountFlags::TYPE_4;
@@ -126,7 +117,55 @@ fn create_render_image(
             .expect("Unable to create render image")
     };
 
+    let memory_requirements = unsafe { context.device.get_image_memory_requirements(image) };
+    let memory_type = memory_requirements.memory_type_bits;
+    let memory_flags = vk::MemoryPropertyFlags::DEVICE_LOCAL;
+    let memory_type_index = get_memory_type_index(context, memory_type, memory_flags);
+    let allocation_size = memory_requirements.size;
+    let memory_allocate_info = vk::MemoryAllocateInfo::builder()
+        .allocation_size(allocation_size)
+        .memory_type_index(memory_type_index);
+
+    println!("[FrameBuffer] Creating device memory..");
+    let device_memory = unsafe {
+        context
+            .device
+            .allocate_memory(&memory_allocate_info, None)
+            .expect("Unable to allocate memory")
+    };
+    println!("[FrameBuffer] ..done. Binding memory..");
+    unsafe {
+        context
+            .device
+            .bind_image_memory(image, device_memory, 0)
+            .expect("Unable to bind image memory")
+    };
+
+    println!("[FrameBuffer] ..done. created render image: {:?}", image);
     image
+}
+
+fn get_memory_type_index(
+    context: &VulkanContext,
+    required_memory_type_bits: u32,
+    required_memory_flags: vk::MemoryPropertyFlags,
+) -> u32 {
+    let properties = unsafe {
+        context
+            .instance
+            .get_physical_device_memory_properties(context.physical_device)
+    };
+    for memory_index in 0..properties.memory_type_count {
+        let memory_type_bits = 1 << memory_index;
+        let is_required_memory_type = required_memory_type_bits & memory_type_bits == 1;
+        let memory_flags = properties.memory_types[memory_index as usize].property_flags;
+        let has_required_properties = memory_flags.contains(required_memory_flags);
+
+        if is_required_memory_type && has_required_properties {
+            return memory_index;
+        }
+    }
+    panic!("Unable to find suitable memory type index");
 }
 
 // TODO: FFR

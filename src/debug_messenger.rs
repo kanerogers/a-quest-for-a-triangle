@@ -36,10 +36,20 @@ unsafe extern "system" fn debug_messenger_callback(
     p_callback_data: *const vk::DebugUtilsMessengerCallbackDataEXT,
     _p_user_data: *mut std::ffi::c_void,
 ) -> vk::Bool32 {
-    println!(
-        "[DebugMessenger]: {:?}",
-        CStr::from_ptr((*p_callback_data).p_message)
-    );
+    let data = *p_callback_data;
+    let message_id = data.message_id_number;
+
+    // These messages are suspected to be bugs. TODO: investigate
+    if message_id == 0x1510053d
+        || message_id == 0x4d5b752
+        || message_id == 0x255d7463
+        || message_id == 0x2f90f26b
+    {
+        return vk::FALSE;
+    }
+
+    println!("[DebugMessenger]: {:?}", CStr::from_ptr(data.p_message));
+
     return vk::FALSE;
 }
 

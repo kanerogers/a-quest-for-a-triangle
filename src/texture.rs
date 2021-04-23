@@ -61,20 +61,20 @@ impl Texture {
         image: &vk::Image,
         context: &VulkanContext,
     ) -> Self {
-        println!("Creating texture for {:?}", image);
+        println!("[Texture] Creating texture for {:?}", image);
         // Get the appropriate image layout for this texture.
-        let image_layout = if usage == TextureUsageFlags::OVR_TEXTURE_USAGE_SAMPLED {
-            vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL
-        } else {
+        let image_layout = if usage == TextureUsageFlags::OVR_TEXTURE_USAGE_FRAG_DENSITY {
             vk::ImageLayout::FRAGMENT_DENSITY_MAP_OPTIMAL_EXT
+        } else {
+            vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL
         };
 
         // Create an image memory barrier because.. ah.. reasons.
         // dst_flags are different between different texture types
-        let dst_flags = if usage == TextureUsageFlags::OVR_TEXTURE_USAGE_SAMPLED {
-            vk::AccessFlags::SHADER_READ
-        } else {
+        let dst_flags = if usage == TextureUsageFlags::OVR_TEXTURE_USAGE_FRAG_DENSITY {
             vk::AccessFlags::FRAGMENT_DENSITY_MAP_READ_EXT
+        } else {
+            vk::AccessFlags::SHADER_READ
         };
 
         context.create_image_memory_barrier(image, dst_flags, image_layout);
@@ -87,6 +87,8 @@ impl Texture {
         let mip_count = 1;
         let sampler = create_sampler(context, wrap_mode, filter, max_anisotropy, mip_count);
         let memory = vk::DeviceMemory::null();
+
+        println!("[Texture] ..done ");
 
         Self {
             width,
