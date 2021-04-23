@@ -1,8 +1,9 @@
+use ash::vk::Handle;
 use ndk::looper::{Poll, ThreadLooper};
 use ovr_mobile_sys::{
     ovrEventDataBuffer, ovrEventHeader_, ovrEventType, ovrJava, ovrMobile, ovrModeFlags,
-    ovrModeParms, ovrStructureType_::VRAPI_STRUCTURE_TYPE_MODE_PARMS, ovrSuccessResult_,
-    vrapi_EnterVrMode, vrapi_PollEvent,
+    ovrModeParms, ovrModeParmsVulkan, ovrStructureType_::VRAPI_STRUCTURE_TYPE_MODE_PARMS_VULKAN,
+    ovrSuccessResult_, vrapi_EnterVrMode, vrapi_PollEvent,
 };
 use std::mem::MaybeUninit;
 use std::ptr::NonNull;
@@ -95,16 +96,22 @@ impl App {
     fn enter_vr(&mut self) {
         println!("[ENTER_VR] Entering VR Mode..");
         let flags = 0u32 | ovrModeFlags::VRAPI_MODE_FLAG_NATIVE_WINDOW as u32;
-        let ovr_mode_parms = ovrModeParms {
-            Type: VRAPI_STRUCTURE_TYPE_MODE_PARMS,
+        let mode_parms = ovrModeParms {
+            Type: VRAPI_STRUCTURE_TYPE_MODE_PARMS_VULKAN,
             Flags: flags,
             Java: self.java.clone(),
             WindowSurface: ndk_glue::native_window().as_ref().unwrap().ptr().as_ptr() as u64,
             Display: 0,
             ShareContext: 0,
         };
+        let queue = self.renderer.context.graphics_queue.as_raw();
+        let mut parms = ovrModeParmsVulkan {
+            ModeParms: mode_parms,
+            SynchronizationQueue: queue,
+        };
+        let parms = NonNull::new(&mut parms).unwrap();
 
-        let ovr_mobile = unsafe { vrapi_EnterVrMode(&ovr_mode_parms) };
+        let ovr_mobile = unsafe { vrapi_EnterVrMode(parms.as_ptr() as *const ovrModeParms) };
         println!("[ENTER_VR] Done.");
 
         self.ovr_mobile = NonNull::new(ovr_mobile);

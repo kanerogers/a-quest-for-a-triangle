@@ -1,8 +1,9 @@
 use crate::{
-    frame_buffer::FrameBuffer, render_pass::RenderPass, texture_swap_chain::TextureSwapChain,
+    eye_command_buffer::EyeCommandBuffer, eye_frame_buffer::EyeFrameBuffer,
+    eye_texture_swap_chain::EyeTextureSwapChain, render_pass::RenderPass,
     vulkan_context::VulkanContext,
 };
-use ash::vk;
+use ash::{version::DeviceV1_0, vk};
 use ovr_mobile_sys::{
     helpers::{vrapi_DefaultLayerBlackProjection2, vrapi_DefaultLayerLoadingIcon2},
     ovrFrameFlags_::VRAPI_FRAME_FLAG_FLUSH,
@@ -20,8 +21,8 @@ pub struct VulkanRenderer {
     pub context: VulkanContext,
     pub frame_index: i64,
     pub render_pass: RenderPass,
-    pub eye_command_buffers: Vec<vk::CommandBuffer>,
-    pub frame_buffers: Vec<FrameBuffer>,
+    pub eye_command_buffers: Vec<EyeCommandBuffer>,
+    pub eye_frame_buffers: Vec<EyeFrameBuffer>,
     // pub view_matrix: Vec<ovrMatrix4f>,
     // pub projection_matrix: Vec<ovrMatrix4f>,
 }
@@ -34,19 +35,19 @@ impl VulkanRenderer {
         let height = vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT);
         let eyes = 2;
 
-        let texture_swap_chains = (0..eyes)
-            .map(|_| TextureSwapChain::new(width, height))
+        let eye_texture_swap_chains = (0..eyes)
+            .map(|_| EyeTextureSwapChain::new(width, height))
             .collect::<Vec<_>>();
 
         let render_pass = RenderPass::new(&context.device);
-        let frame_buffers = texture_swap_chains
+        let frame_buffers = eye_texture_swap_chains
             .iter()
-            .map(|t| FrameBuffer::new(t, &render_pass, &context, width, height))
+            .map(|t| EyeFrameBuffer::new(t, &render_pass, &context, width, height))
             .collect::<Vec<_>>();
 
         let eye_command_buffers = frame_buffers
             .iter()
-            .map(|frame_buffer| create_eye_command_buffer(frame_buffer, &context))
+            .map(|f| EyeCommandBuffer::new(f.frame_buffers.len(), &context))
             .collect::<Vec<_>>();
 
         println!("[VulkanRenderer] ..done! Renderer initialized");
@@ -56,7 +57,7 @@ impl VulkanRenderer {
             frame_index: 0,
             render_pass,
             eye_command_buffers,
-            frame_buffers,
+            eye_frame_buffers: frame_buffers,
             // view_matrix,
             // projection_matrix,
         }
@@ -121,11 +122,4 @@ impl VulkanRenderer {
         let result = vrapi_SubmitFrame2(ovr_mobile, &frame_desc);
         println!("[RENDER] Submit frame result: {:?}", result);
     }
-}
-
-fn create_eye_command_buffer(
-    frame_buffer: &FrameBuffer,
-    context: &VulkanContext,
-) -> vk::CommandBuffer {
-    todo!()
 }

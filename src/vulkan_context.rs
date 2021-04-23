@@ -352,9 +352,9 @@ fn vulkan_init() -> (Instance, Entry) {
         .push_next(&mut debug_messenger_info);
 
     let instance = unsafe { entry.create_instance(&create_info, None) }.unwrap();
-
     let (_debug_utils, _messenger) =
         setup_debug_messenger(&entry, &instance, &debug_messenger_info);
+
     println!("[VulkanContext] ..done");
 
     (instance, entry)

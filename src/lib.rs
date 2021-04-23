@@ -3,15 +3,16 @@ mod app;
 mod debug_messenger;
 mod depth_buffer;
 mod device;
-mod frame_buffer;
+mod eye_frame_buffer;
 mod physical_device;
 mod queue_family_indices;
 mod render_pass;
 mod texture;
-mod texture_swap_chain;
+mod eye_texture_swap_chain;
 mod util;
 mod vulkan_context;
 mod vulkan_renderer;
+mod eye_command_buffer;
 
 mod lib {
     use crate::app::App;

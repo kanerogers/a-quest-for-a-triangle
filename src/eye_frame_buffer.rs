@@ -4,10 +4,10 @@ use ovr_mobile_sys::ovrTextureSwapChain;
 use crate::{depth_buffer::DepthBuffer, render_pass::RenderPass, vulkan_context::VulkanContext};
 use crate::{
     texture::{Texture, TextureUsageFlags},
-    texture_swap_chain::TextureSwapChain,
+    eye_texture_swap_chain::EyeTextureSwapChain,
 };
 
-pub struct FrameBuffer {
+pub struct EyeFrameBuffer {
     pub width: i32,
     pub height: i32,
     pub swapchain_handle: ovrTextureSwapChain,
@@ -21,19 +21,19 @@ pub struct FrameBuffer {
     pub current_layer: usize,
 }
 
-impl FrameBuffer {
+impl EyeFrameBuffer {
     pub fn new(
-        texture_swap_chain: &TextureSwapChain,
+        eye_texture_swap_chain: &EyeTextureSwapChain,
         render_pass: &RenderPass,
         context: &VulkanContext,
         width: i32,
         height: i32,
     ) -> Self {
-        println!("[FrameBuffer] Creating FrameBuffer..");
-        let texture_swap_chain_length = texture_swap_chain.length;
-        let format = texture_swap_chain.format;
+        println!("[EyeFrameBuffer] Creating FrameBuffer..");
+        let eye_texture_swap_chain_length = eye_texture_swap_chain.length;
+        let format = eye_texture_swap_chain.format;
         let display_usage = TextureUsageFlags::OVR_TEXTURE_USAGE_SAMPLED;
-        let display_textures = texture_swap_chain
+        let display_textures = eye_texture_swap_chain
             .display_images
             .iter()
             .map(|image| Texture::new(width, height, format, display_usage, image, context))
@@ -66,13 +66,13 @@ impl FrameBuffer {
             })
             .collect::<Vec<_>>();
 
-        println!("[FrameBuffer] Done!");
+        println!("[EyeFrameBuffer] Done!");
 
         Self {
             width,
             height,
-            swapchain_handle: texture_swap_chain.handle,
-            swap_chain_length: texture_swap_chain_length,
+            swapchain_handle: eye_texture_swap_chain.handle,
+            swap_chain_length: eye_texture_swap_chain_length,
             display_textures,
             // render_texture,
             depth_buffer,
