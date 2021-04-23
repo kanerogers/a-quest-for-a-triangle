@@ -3,7 +3,6 @@ use crate::{
     eye_texture_swap_chain::EyeTextureSwapChain, render_pass::RenderPass,
     vulkan_context::VulkanContext,
 };
-use ash::{version::DeviceV1_0, vk};
 use ovr_mobile_sys::{
     helpers::{vrapi_DefaultLayerBlackProjection2, vrapi_DefaultLayerLoadingIcon2},
     ovrFrameFlags_::VRAPI_FRAME_FLAG_FLUSH,
@@ -64,39 +63,22 @@ impl VulkanRenderer {
     }
 
     pub unsafe fn render(&mut self, ovr_mobile: NonNull<ovrMobile>) -> () {
+        if self.frame_index == 0 {
+            self.frame_index += 1;
+            return self.render_loading_scene(ovr_mobile);
+        }
+    }
+
+    pub unsafe fn render_loading_scene(&mut self, ovr_mobile: NonNull<ovrMobile>) -> () {
         let ovr_mobile = ovr_mobile.as_ptr();
-        println!("[RENDER] In render..");
-        // Get the HMD pose, predicted for the middle of the time period during which
-        // the new eye images will be displayed. The number of frames predicted ahead
-        // depends on the pipeline depth of the engine and the synthesis rate.
-        // The better the prediction, the less black will be pulled in at the edges.
+
         let predicted_display_time = vrapi_GetPredictedDisplayTime(ovr_mobile, self.frame_index);
         let _tracking = vrapi_GetPredictedTracking2(ovr_mobile, predicted_display_time);
-
-        // Advance the simulation based on the predicted display time.
-
-        // Render eye images and setup the 'ovrSubmitFrameDescription2' using 'ovrTracking2' data.
-
         let mut blackLayer = vrapi_DefaultLayerBlackProjection2();
         blackLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER as u32;
 
         let mut iconLayer = vrapi_DefaultLayerLoadingIcon2();
         iconLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER as u32;
-        // layer.HeadPose = tracking.HeadPose;
-        // for eye in 0..2 {
-        //     let colorTextureSwapChainIndex = self.frame_index as i32
-        //         % vrapi_GetTextureSwapChainLength(self.color_texture_swap_chain[eye]);
-        //     let textureId = vrapi_GetTextureSwapChainHandle(
-        //         self.color_texture_swap_chain[eye],
-        //         colorTextureSwapChainIndex,
-        //     );
-        //     //     // Render to 'textureId' using the 'ProjectionMatrix' from 'ovrTracking2'.
-
-        //     layer.Textures[eye].ColorSwapChain = self.color_texture_swap_chain[eye];
-        //     layer.Textures[eye].SwapChainIndex = colorTextureSwapChainIndex;
-        //     layer.Textures[eye].TexCoordsFromTanAngles =
-        //         ovrMatrix4f_TanAngleMatrixFromProjection(&tracking.Eye[eye].ProjectionMatrix);
-        // }
 
         let layers = [
             &blackLayer.Header as *const ovrLayerHeader2,
@@ -116,10 +98,8 @@ impl VulkanRenderer {
             Pad: std::mem::zeroed(),
         };
 
-        println!("[RENDER] About to submit frame..");
-
         // Hand over the eye images to the time warp.
         let result = vrapi_SubmitFrame2(ovr_mobile, &frame_desc);
-        println!("[RENDER] Submit frame result: {:?}", result);
+        assert_eq!(0, result);
     }
 }
