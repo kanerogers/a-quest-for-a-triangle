@@ -1,19 +1,11 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use crate::{colour_swap_chain::ColourSwapChain, render_pass::create_render_pass};
-use ash::{
-    extensions::khr,
-    extensions::ext,
-    version::{DeviceV1_0, EntryV1_0, InstanceV1_0},
-    vk, Device, Entry, Instance,
-};
-use ovr_mobile_sys::ovrJava;
+use ash::{Device, Entry, Instance, extensions::ext, extensions::khr, version::{DeviceV1_0, EntryV1_0, InstanceV1_0}, vk::{self, SurfaceKHR, Window}};
 use std::{ffi:: { CStr, CString}};
 use byte_slice_cast::AsSliceOf;
 
 const MAX_FRAMES_IN_FLIGHT:usize = 2;
-
 
 #[derive(Clone, Debug)]
 struct QueueFamilyIndices {
@@ -26,6 +18,7 @@ impl QueueFamilyIndices {
         instance: &Instance,
         device: vk::PhysicalDevice,
         entry: &Entry,
+        surface_khr: vk::SurfaceKHR,
     ) -> QueueFamilyIndices {
         let mut indices = QueueFamilyIndices {
             graphics_family: None,
@@ -42,7 +35,12 @@ impl QueueFamilyIndices {
             if queue.queue_flags.contains(vk::QueueFlags::GRAPHICS) {
                 indices.graphics_family = Some(i);
             }
-            indices.present_family = Some(i);
+            if unsafe { surface
+                .get_physical_device_surface_support(device, i, surface_khr) }
+                .unwrap()
+            {
+                indices.present_family = Some(i);
+            }
             if indices.is_complete() {
                 break;
             }
@@ -60,7 +58,28 @@ impl QueueFamilyIndices {
     }
 }
 
-pub struct OldVulkanRenderer {
+struct SwapChainSupportDetails {
+    capabilities: vk::SurfaceCapabilitiesKHR,
+    surface_formats: Vec<vk::SurfaceFormatKHR>,
+    present_modes: Vec<vk::PresentModeKHR>
+}
+
+impl SwapChainSupportDetails {
+    fn query_swap_chain_support(instance: &Instance, entry: &Entry, device: vk::PhysicalDevice, surface: vk::SurfaceKHR) -> SwapChainSupportDetails {
+        let surface_ext = khr::Surface::new(entry, instance);
+        let capabilities = unsafe { surface_ext.get_physical_device_surface_capabilities(device, surface).expect("unable to get capabilities") };
+        let surface_formats = unsafe { surface_ext.get_physical_device_surface_formats(device, surface).expect("unable to get surface formats") };
+        let present_modes = unsafe { surface_ext.get_physical_device_surface_present_modes(device, surface).expect("unable to get present modes") };
+
+        SwapChainSupportDetails {
+            capabilities,
+            surface_formats,
+            present_modes
+        }
+    }
+}
+
+struct HelloTriangleApplication {
     _entry: Entry,
     instance: Instance,
     debug_utils: Option<ext::DebugUtils>,
@@ -85,35 +104,30 @@ pub struct OldVulkanRenderer {
     render_finished_semaphores: Vec<vk::Semaphore>,
     in_flight_fences: Vec<vk::Fence>,
     images_in_flight: Vec<Option<vk::Fence>>,
+    surface_loader: khr::Surface,
+    surface: vk::SurfaceKHR,
     current_frame: usize,
 }
 
-impl OldVulkanRenderer {
-    pub fn new(java: &ovrJava) -> OldVulkanRenderer {
+impl HelloTriangleApplication {
+    pub fn new() -> HelloTriangleApplication {
         let (instance, entry, debug_utils, debug_messenger) = unsafe { Self::init_vulkan() };
-        let (physical_device, indices) = pick_physical_device(&instance, &entry);
+        let surface = SurfaceKHR::null();
+        let (physical_device, indices) = pick_physical_device(&instance, &entry, surface);
         let (device, graphics_queue, present_queue) =
             unsafe { create_logical_device(&instance, physical_device, indices.clone()) };
-
-        // Swap Chain - potentially handled by ovr stuff?
-        let (swap_chain_ext, swap_chain, format, extent) = create_swap_chain(&instance, &entry, physical_device, &device, java);
+        let (swap_chain_ext, swap_chain, format, extent) = create_swap_chain(&instance, &entry, physical_device, surface, &device);
         let mut swap_chain_images = get_swap_chain_images(&instance, &device, swap_chain);
         let swap_chain_image_views = create_image_views(&mut swap_chain_images, format, &device);
-
-        // Render Pass
-        let render_pass = todo!();
+        let render_pass = create_render_pass(format, &device);
         let (pipeline_layout, pipeline) = create_graphics_pipeline(&device, extent, render_pass);
-
-        // Frame Buffer
         let swap_chain_framebuffers = create_framebuffers(&swap_chain_image_views, &device, render_pass, extent);
         let command_pool = create_command_pool(indices.clone(), &device);
-
-        // Command Buffer
         let command_buffers = create_command_buffers(&device, &swap_chain_framebuffers, command_pool, render_pass, extent, pipeline);
         let (image_available, render_finished, in_flight_fences, images_in_flight) = create_sync_objects(&device, swap_chain_image_views.len());
         let surface_loader = khr::Surface::new(&entry, &instance);
 
-        OldVulkanRenderer {
+        HelloTriangleApplication {
             instance,
             _entry: entry,
             debug_utils,
@@ -138,6 +152,8 @@ impl OldVulkanRenderer {
             render_finished_semaphores: render_finished,
             in_flight_fences,
             images_in_flight,
+            surface_loader,
+            surface,
             current_frame: 0,
         }
     }
@@ -151,11 +167,10 @@ impl OldVulkanRenderer {
     ) {
         let app_name = CString::new("Hello Triangle").unwrap();
         let entry = Entry::new().unwrap();
+        let extension_names = [];
         let layer_names = get_layer_names(&entry);
 
         let mut debug_messenger_info = get_debug_messenger_create_info();
-        let extension_names = [];
-        let layer_names = [];
 
         let app_info = vk::ApplicationInfo::builder()
             .application_name(&app_name)
@@ -231,7 +246,7 @@ impl OldVulkanRenderer {
     }
 }
 
-impl Drop for OldVulkanRenderer {
+impl Drop for HelloTriangleApplication {
     fn drop(&mut self) {
         unsafe {
             for semaphore in self.render_finished_semaphores.drain(..) {
@@ -272,6 +287,9 @@ impl Drop for OldVulkanRenderer {
             });
             // WARNING: self.debug_messenger is now invalid!
 
+            self.surface_loader.destroy_surface(self.surface, None);
+            // WARNING: self.surface is now invalid!
+
             self.device.destroy_pipeline_layout(self.pipeline_layout, None);
             // WARNING: self.pipeline_layout is now invalid!
 
@@ -286,6 +304,10 @@ impl Drop for OldVulkanRenderer {
             // WARNING: self.instance is now invalid!
         }
     }
+}
+
+fn main() {
+    let app = HelloTriangleApplication::new();
 }
 
 // Semaphores
@@ -483,6 +505,50 @@ fn create_shader_module(device: &Device, bytes: &[u8]) -> vk::ShaderModule {
     unsafe { device.create_shader_module(&create_info, None).expect("Unable to create shader module") }
 }
 
+fn create_render_pass(format: vk::Format, device: &Device) -> vk::RenderPass {
+    let color_attachment = vk::AttachmentDescription::builder()
+        .format(format)
+        .load_op(vk::AttachmentLoadOp::CLEAR)
+        .store_op(vk::AttachmentStoreOp::STORE)
+        .stencil_load_op(vk::AttachmentLoadOp::DONT_CARE)
+        .stencil_store_op(vk::AttachmentStoreOp::DONT_CARE)
+        .initial_layout(vk::ImageLayout::UNDEFINED)
+        .final_layout(vk::ImageLayout::PRESENT_SRC_KHR)
+        .samples(vk::SampleCountFlags::TYPE_1)
+        .build();
+
+    let color_attachments = [color_attachment];
+
+    let color_attachment_ref = vk::AttachmentReference::builder()
+        .attachment(0)
+        .layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
+        .build();
+
+    let color_attachment_refs = [color_attachment_ref];
+
+    let subpass = vk::SubpassDescription::builder()
+        .pipeline_bind_point(vk::PipelineBindPoint::GRAPHICS)
+        .color_attachments(&color_attachment_refs)
+        .build();
+    let subpasses = [subpass];
+
+    let dependency = vk::SubpassDependency::builder()
+        .src_subpass(vk::SUBPASS_EXTERNAL)
+        .dst_subpass(0)
+        .src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
+        .src_access_mask(vk::AccessFlags::empty())
+        .dst_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
+        .dst_access_mask(vk::AccessFlags::COLOR_ATTACHMENT_WRITE)
+        .build();
+    let dependencies = [dependency];
+
+    let render_pass_create_info = vk::RenderPassCreateInfo::builder()
+        .attachments(&color_attachments)
+        .subpasses(&subpasses)
+        .dependencies(&dependencies);
+
+    unsafe { device.create_render_pass(&render_pass_create_info, None).unwrap() }
+}
 
 // Logical Device
 unsafe fn create_logical_device<'a>(
@@ -533,20 +599,89 @@ unsafe fn create_logical_device<'a>(
     (device, graphics_queue, present_queue)
 }
 
+// Surface
+fn get_required_extensions_for_window(window: &Window, entry: &Entry) -> Vec<*const i8> {
+    // let surface_extensions = ash_window::enumerate_required_extensions(window).unwrap();
+
+    // let supported_extensions = entry
+    //     .enumerate_instance_extension_properties()
+    //     .expect("Unable to enumerate instance extension properties")
+    //     .iter()
+    //     .map(|e| unsafe { CStr::from_ptr(e.extension_name.as_ptr()) })
+    //     .collect::<Vec<_>>();
+
+    let extension_names_raw = Vec::new();
+    // for extension in surface_extensions {
+    //     assert!(
+    //         supported_extensions.contains(&extension),
+    //         "Unsupported extension: {:?}",
+    //         extension
+    //     );
+    //     extension_names_raw.push(extension.as_ptr())
+    // }
+
+    // if should_add_validation_layers() {
+    //     let debug_utils = ext::DebugUtils::name();
+    //     extension_names_raw.push(debug_utils.as_ptr())
+    // }
+
+    return extension_names_raw;
+}
+
 // Swap Chain
 fn create_swap_chain (
     instance: &Instance,
     entry: &Entry,
     physical_device: vk::PhysicalDevice,
-    logical_device: &Device,
-    java: &ovrJava,
-) -> (khr::Swapchain, vk::SwapchainKHR, vk::Format, vk::Extent2D) {
-        let colour_swap_chain = unsafe { ColourSwapChain::new(java) };
-        todo!();
+    surface: vk::SurfaceKHR,
+    logical_device: &Device) -> (khr::Swapchain, vk::SwapchainKHR, vk::Format, vk::Extent2D) {
+    let swap_chain_support = SwapChainSupportDetails::query_swap_chain_support(instance, entry, physical_device, surface);
+
+    let surface_format = choose_swap_surface_format(swap_chain_support.surface_formats);
+    let present_mode = choose_swap_present_mode(swap_chain_support.present_modes);
+    let extent = choose_swap_extent(swap_chain_support.capabilities);
+
+    let image_count = swap_chain_support.capabilities.min_image_count + 1;
+    let image_count = if swap_chain_support.capabilities.max_image_count > 0 && image_count > swap_chain_support.capabilities.max_image_count {
+        swap_chain_support.capabilities.max_image_count
+    } else {
+        image_count
+    };
+
+    let indices = QueueFamilyIndices::find_queue_families(instance, physical_device, entry, surface);
+    let indices_are_same = indices.are_same();
+    let image_sharing_mode = if indices_are_same { vk::SharingMode::EXCLUSIVE } else { vk::SharingMode::CONCURRENT };
+    let queue_family_indices = if indices_are_same { Vec::new() } else { vec![indices.graphics_family.unwrap(), indices.present_family.unwrap()] };
+
+    let create_info = vk::SwapchainCreateInfoKHR::builder()
+        .surface(surface)
+        .min_image_count(image_count)
+        .image_format(surface_format.format)
+        .image_color_space(surface_format.color_space)
+        .image_extent(extent)
+        .image_array_layers(1)
+        .image_sharing_mode(image_sharing_mode)
+        .queue_family_indices(&queue_family_indices)
+        .pre_transform(swap_chain_support.capabilities.current_transform)
+        .composite_alpha(vk::CompositeAlphaFlagsKHR::OPAQUE)
+        .present_mode(present_mode)
+        .clipped(true)
+        .old_swapchain(vk::SwapchainKHR::null())
+        .image_usage(vk::ImageUsageFlags::COLOR_ATTACHMENT);
+
+    let swapchain_ext = khr::Swapchain::new(instance, logical_device);
+    let swapchain = unsafe { swapchain_ext.create_swapchain(&create_info, None) }.expect("Unable to create Swapchain");
+    (swapchain_ext, swapchain, surface_format.format, extent)
 }
 
-fn get_format() -> vk::Format {
-    todo!()
+fn choose_swap_surface_format(formats: Vec<vk::SurfaceFormatKHR>) -> vk::SurfaceFormatKHR {
+    for available_format in &formats { 
+        if available_format.format == vk::Format::B8G8R8A8_SRGB && available_format.color_space == vk::ColorSpaceKHR::SRGB_NONLINEAR {
+            return *available_format
+        }
+    }
+
+    return *formats.first().unwrap();
 }
 
 fn choose_swap_present_mode(available_present_modes: Vec<vk::PresentModeKHR>) -> vk::PresentModeKHR {
@@ -556,6 +691,10 @@ fn choose_swap_present_mode(available_present_modes: Vec<vk::PresentModeKHR>) ->
         }
     }
     return *available_present_modes.first().unwrap();
+}
+
+fn choose_swap_extent(capabilities: vk::SurfaceCapabilitiesKHR) -> vk::Extent2D {
+    return capabilities.current_extent
 }
 
 fn get_swap_chain_images(instance: &Instance, device: &Device, swap_chain: vk::SwapchainKHR) -> Vec<vk::Image> {
@@ -611,11 +750,12 @@ fn create_framebuffers(image_views: &Vec<vk::ImageView>, device: &Device, render
 fn pick_physical_device(
     instance: &Instance,
     entry: &Entry,
+    surface: vk::SurfaceKHR,
 ) -> (vk::PhysicalDevice, QueueFamilyIndices) {
     unsafe {
         let devices = instance.enumerate_physical_devices().unwrap();
         let mut devices = devices.into_iter().map(|d| {
-            get_suitability(d, instance, entry)
+            get_suitability(d, instance, entry, surface)
         }).collect::<Vec<_>>();
         devices.sort_by_key(|i| i.0);
 
@@ -629,10 +769,12 @@ unsafe fn get_suitability(
     device: vk::PhysicalDevice,
     instance: &Instance,
     entry: &Entry,
+    surface: vk::SurfaceKHR,
 ) -> (i8, QueueFamilyIndices, vk::PhysicalDevice) {
     let properties = instance.get_physical_device_properties(device);
-    let indices = QueueFamilyIndices::find_queue_families(instance, device, entry);
+    let indices = QueueFamilyIndices::find_queue_families(instance, device, entry, surface);
     let has_extension_support = check_device_extension_support(instance, device);
+    let swap_chain_adequate = check_swap_chain_adequate(instance, entry, surface, device);
     let has_graphics_family = indices.graphics_family.is_some();
 
     let mut suitability = 0;
@@ -640,11 +782,16 @@ unsafe fn get_suitability(
         suitability -= 5;
     }
 
-    let suitable = has_extension_support && has_graphics_family;
+    let suitable = has_extension_support && swap_chain_adequate && has_graphics_family;
 
     if suitable { suitability -= 1 }
 
     (suitability, indices, device)
+}
+
+fn check_swap_chain_adequate(instance: &Instance, entry: &Entry, surface: vk::SurfaceKHR, device: vk::PhysicalDevice) -> bool {
+    let swap_chain_support_details = SwapChainSupportDetails::query_swap_chain_support(instance, entry, device, surface);
+    !swap_chain_support_details.surface_formats.is_empty() && !swap_chain_support_details.present_modes.is_empty()
 }
 
 fn check_device_extension_support(instance: &Instance, device: vk::PhysicalDevice) -> bool {
@@ -717,7 +864,7 @@ fn setup_debug_messenger(
     (None, None)
 }
 
-fn get_layer_names(entry: &Entry) -> Vec<*const i8> {
+fn get_layer_names(entry: &Entry) -> Vec<*const u8> {
     let mut validation_layers_raw = Vec::new();
     if !should_add_validation_layers() {
         return validation_layers_raw;
@@ -737,7 +884,7 @@ fn get_layer_names(entry: &Entry) -> Vec<*const i8> {
             "Unsupported layer: {:?}",
             layer
         );
-        validation_layers_raw.push(layer.as_ptr() as *const i8)
+        validation_layers_raw.push(layer.as_ptr())
     }
 
     return validation_layers_raw;

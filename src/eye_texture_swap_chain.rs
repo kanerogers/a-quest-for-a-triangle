@@ -1,3 +1,5 @@
+use std::ptr::NonNull;
+
 use ash::vk::{self, Handle};
 use ovr_mobile_sys::{
     ovrTextureSwapChain, vrapi_CreateTextureSwapChain3, vrapi_GetTextureSwapChainBufferVulkan,
@@ -8,7 +10,7 @@ use ovr_mobile_sys::{
 // A "texture" is VrApi terminology for a Vulkan "Image", that is to say a buffer of data that is arranged
 // for a specific purpose, either to be rendered or as some other part of the rendering pipeline.
 pub struct EyeTextureSwapChain {
-    pub handle: ovrTextureSwapChain,
+    pub handle: NonNull<ovrTextureSwapChain>,
     pub length: i32,
     pub display_images: Vec<vk::Image>,
     pub format: vk::Format,
@@ -54,9 +56,11 @@ impl EyeTextureSwapChain {
 
         println!("[EyeTextureSwapChain] All done! TextureSwapChain created!");
 
+        let handle = NonNull::new(swapchain_handle).unwrap();
+
         EyeTextureSwapChain {
             format,
-            handle: *swapchain_handle,
+            handle,
             length: swapchain_length,
             display_images,
         }

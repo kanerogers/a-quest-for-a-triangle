@@ -4,7 +4,10 @@ use crate::{
     vulkan_context::VulkanContext,
 };
 use ovr_mobile_sys::{
-    helpers::{vrapi_DefaultLayerBlackProjection2, vrapi_DefaultLayerLoadingIcon2},
+    helpers::{
+        vrapi_DefaultLayerBlackProjection2, vrapi_DefaultLayerLoadingIcon2,
+        vrapi_DefaultLayerProjection2,
+    },
     ovrFrameFlags_::VRAPI_FRAME_FLAG_FLUSH,
     ovrFrameLayerFlags_::VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER,
     ovrJava, ovrLayerHeader2, ovrMobile, ovrSubmitFrameDescription2_,
@@ -67,6 +70,34 @@ impl VulkanRenderer {
             self.frame_index += 1;
             return self.render_loading_scene(ovr_mobile);
         }
+
+        let ovr_mobile = ovr_mobile.as_ptr();
+        let predicted_display_time = vrapi_GetPredictedDisplayTime(ovr_mobile, self.frame_index);
+        let tracking = vrapi_GetPredictedTracking2(ovr_mobile, predicted_display_time);
+
+        let mut layer = vrapi_DefaultLayerProjection2();
+        for eye in 0..2 {
+            let mut texture = layer.Textures[eye];
+            let eye_frame_buffer = &self.eye_frame_buffers[eye];
+            texture.ColorSwapChain = eye_frame_buffer.swapchain_handle.as_ptr();
+            texture.SwapChainIndex = eye_frame_buffer.current_buffer as i32;
+        }
+        layer.HeadPose = tracking.HeadPose;
+        let layers = [&layer.Header as *const ovrLayerHeader2];
+
+        let frame_desc = ovrSubmitFrameDescription2_ {
+            Flags: 0,
+            FrameIndex: 0,
+            SwapInterval: 1,
+            DisplayTime: predicted_display_time,
+            LayerCount: layers.len() as u32,
+            Layers: layers.as_ptr(),
+            Pad: std::mem::zeroed(),
+        };
+
+        // Hand over the eye images to the time warp.
+        let result = vrapi_SubmitFrame2(ovr_mobile, &frame_desc);
+        assert_eq!(0, result);
     }
 
     pub unsafe fn render_loading_scene(&mut self, ovr_mobile: NonNull<ovrMobile>) -> () {
@@ -90,7 +121,7 @@ impl VulkanRenderer {
 
         let frame_desc = ovrSubmitFrameDescription2_ {
             Flags: frameFlags,
-            FrameIndex: self.frame_index as u64,
+            FrameIndex: 0,
             SwapInterval: 1,
             DisplayTime: predicted_display_time,
             LayerCount: layers.len() as u32,

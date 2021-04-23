@@ -13,6 +13,7 @@ mod util;
 mod vulkan_context;
 mod vulkan_renderer;
 mod eye_command_buffer;
+mod old_vulkan;
 
 mod lib {
     use crate::app::App;

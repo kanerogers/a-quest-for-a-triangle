@@ -1,16 +1,19 @@
 use ash::{version::DeviceV1_0, vk};
 use ovr_mobile_sys::ovrTextureSwapChain;
+use std::ptr::NonNull;
 
-use crate::{depth_buffer::DepthBuffer, render_pass::RenderPass, vulkan_context::VulkanContext};
 use crate::{
-    texture::{Texture, TextureUsageFlags},
+    depth_buffer::DepthBuffer,
     eye_texture_swap_chain::EyeTextureSwapChain,
+    render_pass::RenderPass,
+    texture::{Texture, TextureUsageFlags},
+    vulkan_context::VulkanContext,
 };
 
 pub struct EyeFrameBuffer {
     pub width: i32,
     pub height: i32,
-    pub swapchain_handle: ovrTextureSwapChain,
+    pub swapchain_handle: NonNull<ovrTextureSwapChain>,
     pub swap_chain_length: i32,
     pub display_textures: Vec<Texture>, // textures that will be displayed to the user's eyes
     // pub render_texture: Texture,        // ??
@@ -66,12 +69,13 @@ impl EyeFrameBuffer {
             })
             .collect::<Vec<_>>();
 
+        let swapchain_handle = eye_texture_swap_chain.handle;
         println!("[EyeFrameBuffer] Done!");
 
         Self {
             width,
             height,
-            swapchain_handle: eye_texture_swap_chain.handle,
+            swapchain_handle,
             swap_chain_length: eye_texture_swap_chain_length,
             display_textures,
             // render_texture,
