@@ -34,6 +34,10 @@ name = "android.permission.ACCESS_NETWORK_STATE"
 [[package.metadata.android.permission]]
 name = "oculus.permission.HAND_TRACKING"
 
+[[package.metadata.android.application.activity.meta_data]]
+name = "com.oculus.vr.focusaware"
+value = "false"
+
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.17"
 ndk = "0.3.0"

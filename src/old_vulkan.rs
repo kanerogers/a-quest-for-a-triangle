@@ -5,7 +5,7 @@ use ash::{Device, Entry, Instance, extensions::ext, extensions::khr, version::{D
 use std::{ffi:: { CStr, CString}};
 use byte_slice_cast::AsSliceOf;
 
-const MAX_FRAMES_IN_FLIGHT:usize = 2;
+pub(crate) const MAX_FRAMES_IN_FLIGHT:usize = 2;
 
 #[derive(Clone, Debug)]
 struct QueueFamilyIndices {
@@ -311,7 +311,7 @@ fn main() {
 }
 
 // Semaphores
-fn create_sync_objects(device: &Device, swapchain_images_size: usize) -> (Vec<vk::Semaphore>, Vec<vk::Semaphore>, Vec<vk::Fence>, Vec<Option<vk::Fence>>) {
+pub fn create_sync_objects(device: &Device, swapchain_images_size: usize) -> (Vec<vk::Semaphore>, Vec<vk::Semaphore>, Vec<vk::Fence>, Vec<Option<vk::Fence>>) {
     let mut image_available_semaphores = Vec::with_capacity(MAX_FRAMES_IN_FLIGHT);
     let mut render_finished_semaphores = Vec::with_capacity(MAX_FRAMES_IN_FLIGHT);
     let mut inflight_fences = Vec::with_capacity(MAX_FRAMES_IN_FLIGHT);
@@ -349,7 +349,7 @@ fn create_command_pool(queue_family_indices: QueueFamilyIndices, device: &Device
     unsafe { device.create_command_pool(&pool_info, None).expect("Unable to create command pool") }
 }
 
-fn create_command_buffers(device: &Device, swap_chain_framebuffers: &Vec<vk::Framebuffer>, command_pool: vk::CommandPool, render_pass: vk::RenderPass, extent: vk::Extent2D, graphics_pipeline: vk::Pipeline) -> Vec<vk::CommandBuffer> {
+pub fn create_command_buffers(device: &Device, swap_chain_framebuffers: &Vec<vk::Framebuffer>, command_pool: vk::CommandPool, render_pass: vk::RenderPass, extent: vk::Extent2D, graphics_pipeline: vk::Pipeline) -> Vec<vk::CommandBuffer> {
     let alloc_info = vk::CommandBufferAllocateInfo::builder()
         .command_pool(command_pool)
         .level(vk::CommandBufferLevel::PRIMARY)
@@ -394,7 +394,7 @@ fn create_command_buffers(device: &Device, swap_chain_framebuffers: &Vec<vk::Fra
 }
 
 // Graphics Pipeline
-fn create_graphics_pipeline(device: &Device, extent: vk::Extent2D, render_pass: vk::RenderPass) -> (vk::PipelineLayout, vk::Pipeline) { 
+pub fn create_graphics_pipeline(device: &Device, extent: vk::Extent2D, render_pass: vk::RenderPass) -> (vk::PipelineLayout, vk::Pipeline) { 
     let vert_shader_code = include_bytes!("./shaders/shader.vert.spv");
     let frag_shader_code = include_bytes!("./shaders/shader.frag.spv");
 

@@ -3,17 +3,17 @@ mod app;
 mod debug_messenger;
 mod depth_buffer;
 mod device;
+mod eye_command_buffer;
 mod eye_frame_buffer;
+mod eye_texture_swap_chain;
+mod old_vulkan;
 mod physical_device;
 mod queue_family_indices;
 mod render_pass;
 mod texture;
-mod eye_texture_swap_chain;
 mod util;
 mod vulkan_context;
 mod vulkan_renderer;
-mod eye_command_buffer;
-mod old_vulkan;
 
 mod lib {
     use crate::app::App;
@@ -31,7 +31,7 @@ mod lib {
         let vm_ptr = native_activity.vm();
 
         let vm: jni::JavaVM = unsafe { jni::JavaVM::from_raw(vm_ptr) }.unwrap();
-        let env = vm.attach_current_thread_permanently().unwrap();
+        let env = vm.attach_current_thread().unwrap();
 
         let java = ovrJava {
             Vm: vm.get_java_vm_pointer(),
@@ -43,7 +43,6 @@ mod lib {
         let mut app = App::new(java);
 
         app.run();
-
         println!("Destroy requested! Bye for now!");
     }
 

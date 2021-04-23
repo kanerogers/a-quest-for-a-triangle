@@ -3,7 +3,8 @@ use ndk::looper::{Poll, ThreadLooper};
 use ovr_mobile_sys::{
     ovrEventDataBuffer, ovrEventHeader_, ovrEventType, ovrJava, ovrMobile, ovrModeFlags,
     ovrModeParms, ovrModeParmsVulkan, ovrStructureType_::VRAPI_STRUCTURE_TYPE_MODE_PARMS_VULKAN,
-    ovrSuccessResult_, vrapi_EnterVrMode, vrapi_PollEvent,
+    ovrSuccessResult_, vrapi_DestroySystemVulkan, vrapi_EnterVrMode, vrapi_LeaveVrMode,
+    vrapi_PollEvent, vrapi_Shutdown,
 };
 use std::mem::MaybeUninit;
 use std::ptr::NonNull;
@@ -53,6 +54,7 @@ impl App {
             self.next_state();
         }
     }
+
     pub fn handle_vr_api_event(&mut self, event: ovrEventType) -> () {
         println!("[VR_API_EVENTS] Received VR event {:?}", event);
         match event {
@@ -79,22 +81,40 @@ impl App {
     }
 
     fn next_state(&mut self) {
+        if self.need_to_exit_vr() {
+            unsafe { self.exit_vr() };
+            return;
+        }
         if self.need_to_enter_vr() {
             self.enter_vr();
+            return;
         }
         if self.should_render() {
-            unsafe {
-                self.render();
-            }
+            unsafe { self.render() };
+            return;
         }
+        if self.destroy_requested {
+            unsafe { self.destroy() };
+            return;
+        }
+    }
+
+    fn need_to_exit_vr(&self) -> bool {
+        if self.ovr_mobile.is_none() {
+            return false;
+        };
+        !self.resumed || !self.window_created
     }
 
     fn need_to_enter_vr(&self) -> bool {
-        self.resumed && self.window_created && self.ovr_mobile.is_none()
+        if self.ovr_mobile.is_some() {
+            return false;
+        };
+        self.resumed && self.window_created
     }
 
     fn enter_vr(&mut self) {
-        println!("[ENTER_VR] Entering VR Mode..");
+        println!("[App] Entering VR Mode..");
         let flags = 0u32 | ovrModeFlags::VRAPI_MODE_FLAG_NATIVE_WINDOW as u32;
         let mode_parms = ovrModeParms {
             Type: VRAPI_STRUCTURE_TYPE_MODE_PARMS_VULKAN,
@@ -112,13 +132,27 @@ impl App {
         let parms = NonNull::new(&mut parms).unwrap();
 
         let ovr_mobile = unsafe { vrapi_EnterVrMode(parms.as_ptr() as *const ovrModeParms) };
-        println!("[ENTER_VR] Done.");
+        println!("[App] Done. Preparing for first render..");
 
         self.ovr_mobile = NonNull::new(ovr_mobile);
     }
 
+    unsafe fn destroy(&mut self) {
+        println!("[App] Destroying app..");
+        vrapi_DestroySystemVulkan();
+        vrapi_Shutdown();
+        println!("[App] ..done");
+    }
+
+    unsafe fn exit_vr(&mut self) {
+        println!("[App] Exiting VR mode..");
+        let ovr_mobile = self.ovr_mobile.take().unwrap();
+        vrapi_LeaveVrMode(ovr_mobile.as_ptr());
+        println!("[App] ..done");
+    }
+
     fn should_render(&self) -> bool {
-        self.resumed && self.window_created && self.ovr_mobile.is_some()
+        !self.destroy_requested && self.resumed && self.window_created && self.ovr_mobile.is_some()
     }
 
     unsafe fn render(&mut self) {
