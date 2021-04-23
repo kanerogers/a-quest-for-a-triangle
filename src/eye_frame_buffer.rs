@@ -18,7 +18,6 @@ pub struct EyeFrameBuffer {
     pub display_textures: Vec<Texture>, // textures that will be displayed to the user's eyes
     // pub render_texture: Texture,        // ??
     pub frame_buffers: Vec<vk::Framebuffer>, // ??
-    pub depth_buffer: DepthBuffer,
     pub num_layers: usize,
     pub current_buffer: usize,
     pub current_layer: usize,
@@ -42,31 +41,9 @@ impl EyeFrameBuffer {
             .map(|image| Texture::new(width, height, format, display_usage, image, context))
             .collect::<Vec<_>>();
 
-        let render_usage = TextureUsageFlags::OVR_TEXTURE_USAGE_COLOR_ATTACHMENT;
-        let render_format = render_pass.colour_format;
-        let render_usage_flags = vk::ImageUsageFlags::COLOR_ATTACHMENT
-            | vk::ImageUsageFlags::TRANSIENT_ATTACHMENT
-            | vk::ImageUsageFlags::INPUT_ATTACHMENT;
-        let render_image = context.create_image(width, height, render_format, render_usage_flags);
-        let render_texture =
-            Texture::new(width, height, format, render_usage, &render_image, context);
-
-        render_texture.change_usage(context, render_usage);
-
-        let depth_format = render_pass.depth_format;
-        let depth_buffer = DepthBuffer::new(width, height, depth_format, context);
-
         let frame_buffers = display_textures
             .iter()
-            .map(|t| {
-                create_frame_buffer(
-                    render_texture.view,
-                    t,
-                    depth_buffer.view,
-                    render_pass,
-                    context,
-                )
-            })
+            .map(|t| create_frame_buffer(t, render_pass, context))
             .collect::<Vec<_>>();
 
         let swapchain_handle = eye_texture_swap_chain.handle;
@@ -79,7 +56,6 @@ impl EyeFrameBuffer {
             swap_chain_length: eye_texture_swap_chain_length,
             display_textures,
             // render_texture,
-            depth_buffer,
             frame_buffers,
             num_layers: 2,
             current_buffer: 0,
@@ -89,20 +65,19 @@ impl EyeFrameBuffer {
 }
 
 fn create_frame_buffer(
-    render_image_view: vk::ImageView,
     t: &Texture,
-    depth_buffer_view: vk::ImageView,
     render_pass: &RenderPass,
     context: &VulkanContext,
 ) -> vk::Framebuffer {
     // let attachments = [render_image_view, t.view, depth_buffer_view];
-    let attachments = [render_image_view];
+    let attachments = [t.view];
     let create_info = vk::FramebufferCreateInfo::builder()
         .attachments(&attachments)
         .width(t.width as u32)
         .height(t.height as u32)
         .layers(1)
         .render_pass(render_pass.render_pass);
+
     unsafe {
         context
             .device
@@ -110,6 +85,21 @@ fn create_frame_buffer(
             .expect("Unable to create frame buffer")
     }
 }
+
+// TODO: depth/render
+// let render_usage = TextureUsageFlags::OVR_TEXTURE_USAGE_COLOR_ATTACHMENT;
+// let render_format = render_pass.colour_format;
+// let render_usage_flags = vk::ImageUsageFlags::COLOR_ATTACHMENT
+//     | vk::ImageUsageFlags::TRANSIENT_ATTACHMENT
+//     | vk::ImageUsageFlags::INPUT_ATTACHMENT;
+// let render_image = context.create_image(width, height, render_format, render_usage_flags);
+// let render_texture =
+//     Texture::new(width, height, format, render_usage, &render_image, context);
+
+// render_texture.change_usage(context, render_usage);
+
+// let depth_format = render_pass.depth_format;
+// let depth_buffer = DepthBuffer::new(width, height, depth_format, context);
 
 // TODO: FFR
 // let ffr_usage = TextureUsageFlags::OVR_TEXTURE_USAGE_FRAG_DENSITY;

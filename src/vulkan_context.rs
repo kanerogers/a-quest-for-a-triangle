@@ -127,7 +127,7 @@ impl VulkanContext {
         let face_count = 1;
         let num_storage_levels = 1;
         let array_layers_count = face_count;
-        let sample_count = vk::SampleCountFlags::TYPE_4;
+        let sample_count = vk::SampleCountFlags::TYPE_1;
         let extent = vk::Extent3D::builder()
             .width(width as u32)
             .height(height as u32)

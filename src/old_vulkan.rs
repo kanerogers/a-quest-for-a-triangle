@@ -505,7 +505,7 @@ fn create_shader_module(device: &Device, bytes: &[u8]) -> vk::ShaderModule {
     unsafe { device.create_shader_module(&create_info, None).expect("Unable to create shader module") }
 }
 
-fn create_render_pass(format: vk::Format, device: &Device) -> vk::RenderPass {
+pub fn create_render_pass(format: vk::Format, device: &Device) -> vk::RenderPass {
     let color_attachment = vk::AttachmentDescription::builder()
         .format(format)
         .load_op(vk::AttachmentLoadOp::CLEAR)
