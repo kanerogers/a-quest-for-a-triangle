@@ -730,7 +730,7 @@ fn create_image_views(swap_chain_images: &mut Vec<vk::Image>, format: vk::Format
     }).collect::<Vec<_>>()
 }
 
-fn create_framebuffers(image_views: &Vec<vk::ImageView>, device: &Device, render_pass: vk::RenderPass, extent: vk::Extent2D) -> Vec<vk::Framebuffer> {
+pub fn create_framebuffers(image_views: &Vec<vk::ImageView>, device: &Device, render_pass: vk::RenderPass, extent: vk::Extent2D) -> Vec<vk::Framebuffer> {
     image_views.iter().map(|v| {
         let attachments = [*v]; //.. really?
         let create_info = vk::FramebufferCreateInfo::builder()

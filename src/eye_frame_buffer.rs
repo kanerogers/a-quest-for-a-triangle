@@ -95,7 +95,8 @@ fn create_frame_buffer(
     render_pass: &RenderPass,
     context: &VulkanContext,
 ) -> vk::Framebuffer {
-    let attachments = [render_image_view, t.view, depth_buffer_view];
+    // let attachments = [render_image_view, t.view, depth_buffer_view];
+    let attachments = [render_image_view];
     let create_info = vk::FramebufferCreateInfo::builder()
         .attachments(&attachments)
         .width(t.width as u32)

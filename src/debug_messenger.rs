@@ -44,6 +44,7 @@ unsafe extern "system" fn debug_messenger_callback(
         || message_id == 0x4d5b752
         || message_id == 0x255d7463
         || message_id == 0x2f90f26b
+        || message_id == 0x156f5810
     {
         return vk::FALSE;
     }
