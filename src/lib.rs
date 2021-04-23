@@ -1,17 +1,17 @@
 #![allow(non_snake_case)]
 mod app;
-mod texture_swap_chain;
 mod debug_messenger;
+mod depth_buffer;
 mod device;
-mod eye_command_buffer;
 mod frame_buffer;
 mod physical_device;
 mod queue_family_indices;
 mod render_pass;
+mod texture;
+mod texture_swap_chain;
 mod util;
 mod vulkan_context;
 mod vulkan_renderer;
-mod texture;
 
 mod lib {
     use crate::app::App;

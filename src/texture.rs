@@ -19,7 +19,7 @@ bitflags! {
 
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub enum TextureWrapMode {
-    OvrTextureWrapModeRepeat,
+    _OvrTextureWrapModeRepeat,
     OvrTextureWrapModeClampToEdge,
     OvrTextureWrapModeClampToBorder,
 }
@@ -28,7 +28,7 @@ pub enum TextureWrapMode {
 pub enum TextureFilter {
     OvrTextureFilterNearest,
     OvrTextureFilterLinear,
-    OvrTextureFilterBilinear,
+    _OvrTextureFilterBilinear,
 }
 
 // A texture is an image, or part of an image that will be rendered to the eyes.
@@ -121,10 +121,8 @@ impl Texture {
         }
     }
 
-    pub fn change_usage(&self, context: &VulkanContext, usage: TextureUsageFlags) -> () {
-        // create setup_command buffer
-
-        // flush buffer
+    pub fn change_usage(&self, _context: &VulkanContext, _usage: TextureUsageFlags) -> () {
+        println!("[Texture] Cowardly refusing to change usage.")
     }
 }
 

@@ -112,6 +112,96 @@ impl VulkanContext {
 
         self.flush_setup_command_buffer(command_buffer);
     }
+    pub fn create_image(&self, width: i32, height: i32, format: vk::Format) -> vk::Image {
+        let device = &self.device;
+        println!("[FrameBuffer] Creating render image");
+        let face_count = 1;
+        let format_properties = unsafe {
+            self.instance
+                .get_physical_device_format_properties(self.physical_device, format)
+        };
+
+        assert!(format_properties
+            .optimal_tiling_features
+            .contains(vk::FormatFeatureFlags::COLOR_ATTACHMENT));
+
+        let num_storage_levels = 1;
+        let array_layers_count = face_count;
+        let usage = vk::ImageUsageFlags::COLOR_ATTACHMENT
+            | vk::ImageUsageFlags::TRANSIENT_ATTACHMENT
+            | vk::ImageUsageFlags::INPUT_ATTACHMENT;
+        let sample_count = vk::SampleCountFlags::TYPE_4;
+        let extent = vk::Extent3D::builder()
+            .width(width as u32)
+            .height(height as u32)
+            .depth(1)
+            .build();
+
+        let create_info = vk::ImageCreateInfo::builder()
+            .image_type(vk::ImageType::TYPE_2D)
+            .format(format)
+            .extent(extent)
+            .mip_levels(num_storage_levels)
+            .array_layers(array_layers_count)
+            .samples(sample_count)
+            .tiling(vk::ImageTiling::OPTIMAL)
+            .usage(usage)
+            .sharing_mode(vk::SharingMode::EXCLUSIVE)
+            .initial_layout(vk::ImageLayout::UNDEFINED);
+
+        let image = unsafe {
+            device
+                .create_image(&create_info, None)
+                .expect("Unable to create render image")
+        };
+
+        let memory_requirements = unsafe { device.get_image_memory_requirements(image) };
+        let memory_type = memory_requirements.memory_type_bits;
+        let memory_flags = vk::MemoryPropertyFlags::DEVICE_LOCAL;
+        let memory_type_index = self.get_memory_type_index(memory_type, memory_flags);
+        let allocation_size = memory_requirements.size;
+        let memory_allocate_info = vk::MemoryAllocateInfo::builder()
+            .allocation_size(allocation_size)
+            .memory_type_index(memory_type_index);
+
+        println!("[FrameBuffer] Creating device memory..");
+        let device_memory = unsafe {
+            device
+                .allocate_memory(&memory_allocate_info, None)
+                .expect("Unable to allocate memory")
+        };
+        println!("[FrameBuffer] ..done. Binding memory..");
+        unsafe {
+            device
+                .bind_image_memory(image, device_memory, 0)
+                .expect("Unable to bind image memory")
+        };
+
+        println!("[FrameBuffer] ..done. created render image: {:?}", image);
+        image
+    }
+
+    fn get_memory_type_index(
+        &self,
+        required_memory_type_bits: u32,
+        required_memory_flags: vk::MemoryPropertyFlags,
+    ) -> u32 {
+        let properties = unsafe {
+            self.instance
+                .get_physical_device_memory_properties(self.physical_device)
+        };
+        for memory_index in 0..properties.memory_type_count {
+            let memory_type_bits = 1 << memory_index;
+            let is_required_memory_type = required_memory_type_bits & memory_type_bits == 1;
+            let memory_flags = properties.memory_types[memory_index as usize].property_flags;
+            let has_required_properties = memory_flags.contains(required_memory_flags);
+
+            if is_required_memory_type && has_required_properties {
+                return memory_index;
+            }
+        }
+        panic!("Unable to find suitable memory type index");
+    }
 
     fn create_setup_command_buffer(&self) -> vk::CommandBuffer {
         let allocate_info = vk::CommandBufferAllocateInfo::builder()

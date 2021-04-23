@@ -1,10 +1,8 @@
 use ash::vk::{self, Handle};
 use ovr_mobile_sys::{
-    ovrTextureSwapChain, vrapi_CreateTextureSwapChain3,
-    vrapi_GetTextureSwapChainBufferFoveationVulkan, vrapi_GetTextureSwapChainBufferVulkan,
-    vrapi_GetTextureSwapChainLength, VkImage,
+    ovrTextureSwapChain, vrapi_CreateTextureSwapChain3, vrapi_GetTextureSwapChainBufferVulkan,
+    vrapi_GetTextureSwapChainLength,
 };
-use std::ptr::NonNull;
 
 // A wrapper around VrApi's texture SwapChain.
 // A "texture" is VrApi terminology for a Vulkan "Image", that is to say a buffer of data that is arranged
