@@ -13,8 +13,8 @@ pub struct DepthBuffer {
 
 impl DepthBuffer {
     pub fn new(width: i32, height: i32, format: vk::Format, context: &VulkanContext) -> Self {
-        let usage =
-            vk::ImageUsageFlags::TRANSIENT_ATTACHMENT | vk::ImageUsageFlags::INPUT_ATTACHMENT;
+        let usage = vk::ImageUsageFlags::TRANSIENT_ATTACHMENT
+            | vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT;
         let image = context.create_image(width, height, format, usage);
         let aspect_mask = vk::ImageAspectFlags::DEPTH | vk::ImageAspectFlags::STENCIL;
         let view = context.create_image_view(&image, format, aspect_mask);

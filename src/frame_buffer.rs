@@ -1,4 +1,4 @@
-use ash::vk;
+use ash::{version::DeviceV1_0, vk};
 use ovr_mobile_sys::ovrTextureSwapChain;
 
 use crate::{depth_buffer::DepthBuffer, render_pass::RenderPass, vulkan_context::VulkanContext};
@@ -14,7 +14,7 @@ pub struct FrameBuffer {
     pub swap_chain_length: i32,
     pub display_textures: Vec<Texture>, // textures that will be displayed to the user's eyes
     // pub render_texture: Texture,        // ??
-    pub framebuffers: Vec<vk::Framebuffer>, // ??
+    pub frame_buffers: Vec<vk::Framebuffer>, // ??
     pub depth_buffer: DepthBuffer,
     pub num_layers: usize,
     pub current_buffer: usize,
@@ -53,7 +53,18 @@ impl FrameBuffer {
         let depth_format = render_pass.depth_format;
         let depth_buffer = DepthBuffer::new(width, height, depth_format, context);
 
-        let framebuffers = Vec::new();
+        let frame_buffers = display_textures
+            .iter()
+            .map(|t| {
+                create_frame_buffer(
+                    render_texture.view,
+                    t,
+                    depth_buffer.view,
+                    render_pass,
+                    context,
+                )
+            })
+            .collect::<Vec<_>>();
 
         println!("[FrameBuffer] Done!");
 
@@ -65,11 +76,33 @@ impl FrameBuffer {
             display_textures,
             // render_texture,
             depth_buffer,
-            framebuffers,
+            frame_buffers,
             num_layers: 2,
             current_buffer: 0,
             current_layer: 0,
         }
+    }
+}
+
+fn create_frame_buffer(
+    render_image_view: vk::ImageView,
+    t: &Texture,
+    depth_buffer_view: vk::ImageView,
+    render_pass: &RenderPass,
+    context: &VulkanContext,
+) -> vk::Framebuffer {
+    let attachments = [render_image_view, t.view, depth_buffer_view];
+    let create_info = vk::FramebufferCreateInfo::builder()
+        .attachments(&attachments)
+        .width(t.width as u32)
+        .height(t.height as u32)
+        .layers(1)
+        .render_pass(render_pass.render_pass);
+    unsafe {
+        context
+            .device
+            .create_framebuffer(&create_info, None)
+            .expect("Unable to create frame buffer")
     }
 }
 

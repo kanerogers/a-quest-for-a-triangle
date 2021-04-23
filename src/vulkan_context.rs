@@ -123,12 +123,8 @@ impl VulkanContext {
     ) -> vk::Image {
         let device = &self.device;
         println!("[VulkanContext] Creating image..");
-        let face_count = 1;
-        let format_properties = unsafe {
-            self.instance
-                .get_physical_device_format_properties(self.physical_device, format)
-        };
 
+        let face_count = 1;
         let num_storage_levels = 1;
         let array_layers_count = face_count;
         let sample_count = vk::SampleCountFlags::TYPE_4;

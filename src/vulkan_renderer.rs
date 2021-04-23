@@ -44,8 +44,9 @@ impl VulkanRenderer {
             .map(|t| FrameBuffer::new(t, &render_pass, &context, width, height))
             .collect::<Vec<_>>();
 
-        let eye_command_buffers = (0..eyes)
-            .map(|_| create_eye_command_buffer())
+        let eye_command_buffers = frame_buffers
+            .iter()
+            .map(|frame_buffer| create_eye_command_buffer(frame_buffer, &context))
             .collect::<Vec<_>>();
 
         println!("[VulkanRenderer] ..done! Renderer initialized");
@@ -122,6 +123,9 @@ impl VulkanRenderer {
     }
 }
 
-fn create_eye_command_buffer() -> vk::CommandBuffer {
+fn create_eye_command_buffer(
+    frame_buffer: &FrameBuffer,
+    context: &VulkanContext,
+) -> vk::CommandBuffer {
     todo!()
 }
