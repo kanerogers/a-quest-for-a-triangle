@@ -90,7 +90,9 @@ fn create_render_image(
 
     let num_storage_levels = 1;
     let array_layers_count = face_count;
-    let usage = vk::ImageUsageFlags::COLOR_ATTACHMENT;
+    let usage = vk::ImageUsageFlags::COLOR_ATTACHMENT
+        | vk::ImageUsageFlags::TRANSIENT_ATTACHMENT
+        | vk::ImageUsageFlags::INPUT_ATTACHMENT;
     let sample_count = vk::SampleCountFlags::TYPE_4;
     let extent = vk::Extent3D::builder()
         .width(width as u32)

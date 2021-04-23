@@ -81,11 +81,19 @@ impl Texture {
 
         // Great! Now create an image view.
         let view = create_image_view(context, image, color_format);
+        let sampler;
+        let mip_count = 1;
+        let max_anisotropy = 1.0;
         let wrap_mode = TextureWrapMode::OvrTextureWrapModeClampToBorder;
         let filter = TextureFilter::OvrTextureFilterLinear;
-        let max_anisotropy = 1.0;
-        let mip_count = 1;
-        let sampler = create_sampler(context, wrap_mode, filter, max_anisotropy, mip_count);
+
+        // If necessary, create a sampler.
+        if usage != TextureUsageFlags::OVR_TEXTURE_USAGE_COLOR_ATTACHMENT {
+            sampler = create_sampler(context, wrap_mode, filter, max_anisotropy, mip_count);
+        } else {
+            sampler = vk::Sampler::null();
+        }
+
         let memory = vk::DeviceMemory::null();
 
         println!("[Texture] ..done ");
