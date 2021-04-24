@@ -124,7 +124,7 @@ impl HelloTriangleApplication {
         let swap_chain_framebuffers = create_framebuffers(&swap_chain_image_views, &device, render_pass, extent);
         let command_pool = create_command_pool(indices.clone(), &device);
         let command_buffers = create_command_buffers(&device, &swap_chain_framebuffers, command_pool, render_pass, extent, pipeline);
-        let (image_available, render_finished, in_flight_fences, images_in_flight) = create_sync_objects(&device, swap_chain_image_views.len());
+        let (image_available, render_finished, in_flight_fences, images_in_flight) = todo!();
         let surface_loader = khr::Surface::new(&entry, &instance);
 
         HelloTriangleApplication {
@@ -309,12 +309,18 @@ impl Drop for HelloTriangleApplication {
 fn main() {
     let app = HelloTriangleApplication::new();
 }
+pub struct SyncObjects {
+    pub in_flight_fences: Vec<vk::Fence>,
+    pub image_available_semaphores: Vec<vk::Semaphore>,
+    pub render_finished_semaphores: Vec<vk::Semaphore>,
+    pub images_in_flight: Vec<Option<vk::Fence>>,
+}
 
 // Semaphores
-pub fn create_sync_objects(device: &Device, swapchain_images_size: usize) -> (Vec<vk::Semaphore>, Vec<vk::Semaphore>, Vec<vk::Fence>, Vec<Option<vk::Fence>>) {
+pub fn create_sync_objects(device: &Device, swapchain_images_size: usize) -> SyncObjects {
     let mut image_available_semaphores = Vec::with_capacity(MAX_FRAMES_IN_FLIGHT);
     let mut render_finished_semaphores = Vec::with_capacity(MAX_FRAMES_IN_FLIGHT);
-    let mut inflight_fences = Vec::with_capacity(MAX_FRAMES_IN_FLIGHT);
+    let mut in_flight_fences = Vec::with_capacity(MAX_FRAMES_IN_FLIGHT);
     let mut images_in_flight = Vec::with_capacity(swapchain_images_size);
 
     let semaphore_info = vk::SemaphoreCreateInfo::builder();
@@ -330,7 +336,7 @@ pub fn create_sync_objects(device: &Device, swapchain_images_size: usize) -> (Ve
         render_finished_semaphores.push(render_finished);
 
         let in_flight_fence = unsafe { device.create_fence(&fence_info, None)}.expect("Unable to create fence!");
-        inflight_fences.push(in_flight_fence);
+        in_flight_fences.push(in_flight_fence);
     }
 
     println!("swapchain images size: {}", swapchain_images_size);
@@ -338,7 +344,9 @@ pub fn create_sync_objects(device: &Device, swapchain_images_size: usize) -> (Ve
         images_in_flight.push(None);
     }
 
-    (image_available_semaphores, render_finished_semaphores, inflight_fences, images_in_flight)
+    SyncObjects {
+        image_available_semaphores, render_finished_semaphores, in_flight_fences, images_in_flight
+    }
 }
 
 // Command Buffers/Pools

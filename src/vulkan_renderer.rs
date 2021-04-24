@@ -1,9 +1,8 @@
-use crate::old_vulkan::create_graphics_pipeline;
+use crate::old_vulkan::{create_graphics_pipeline, SyncObjects};
 use crate::{
-    eye_command_buffer::EyeCommandBuffer,
     eye_frame_buffer::EyeFrameBuffer,
     eye_texture_swap_chain::EyeTextureSwapChain,
-    old_vulkan::{create_command_buffers, create_sync_objects, MAX_FRAMES_IN_FLIGHT},
+    old_vulkan::{create_command_buffers, create_sync_objects},
     render_pass::RenderPass,
     vulkan_context::VulkanContext,
 };
@@ -31,9 +30,7 @@ pub struct VulkanRenderer {
     pub render_pass: RenderPass,
     pub eye_command_buffers: [Vec<vk::CommandBuffer>; 2],
     pub eye_frame_buffers: [EyeFrameBuffer; 2],
-    pub in_flight_fences: Vec<vk::Fence>,
-    pub image_available_semaphores: Vec<vk::Semaphore>,
-    pub render_finished_semaphores: Vec<vk::Semaphore>,
+    pub sync_objects: [SyncObjects; 2],
 }
 
 impl VulkanRenderer {
@@ -92,12 +89,10 @@ impl VulkanRenderer {
             ),
         ];
 
-        let (
-            image_available_semaphores,
-            render_finished_semaphores,
-            in_flight_fences,
-            images_in_flight,
-        ) = create_sync_objects(&context.device, 2);
+        let sync_objects = [
+            create_sync_objects(&context.device, 3),
+            create_sync_objects(&context.device, 3),
+        ];
 
         println!("[VulkanRenderer] ..done! Renderer initialized");
 
@@ -107,9 +102,7 @@ impl VulkanRenderer {
             render_pass,
             eye_command_buffers,
             eye_frame_buffers,
-            in_flight_fences,
-            image_available_semaphores,
-            render_finished_semaphores,
+            sync_objects,
         }
     }
 
@@ -155,48 +148,52 @@ impl VulkanRenderer {
     }
 
     pub fn draw_frame(&mut self, eye: usize) {
-        let fence = self
-            .in_flight_fences
-            .get(self.current_frame)
-            .expect("Unable to get fence!");
-        let fences = [*fence];
+        let sync_objects = &mut self.sync_objects[eye];
+        // let fence = sync_objects
+        //     .in_flight_fences
+        //     .get(self.current_frame)
+        //     .expect("Unable to get fence!");
+        // let fences = [*fence];
 
-        unsafe { self.context.device.wait_for_fences(&fences, true, u64::MAX) }
-            .expect("Unable to wait for fence");
+        // unsafe { self.context.device.wait_for_fences(&fences, true, u64::MAX) }
+        //     .expect("Unable to wait for fence");
 
-        let image_available_semaphore = self
-            .image_available_semaphores
-            .get(self.current_frame)
-            .expect("Unable to get image_available semaphore for frame!");
-        let render_finished_semaphore = self
-            .render_finished_semaphores
-            .get(self.current_frame)
-            .expect("Unable to get render_finished semaphore");
+        // let image_available_semaphore = sync_objects
+        //     .image_available_semaphores
+        //     .get(self.current_frame)
+        //     .expect("Unable to get image_available semaphore for frame!");
+        // let render_finished_semaphore = sync_objects
+        //     .render_finished_semaphores
+        //     .get(self.current_frame)
+        //     .expect("Unable to get render_finished semaphore");
 
         // let wait_semaphores = [*image_available_semaphore];
-        let wait_stages = [vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
+        // let wait_stages = [vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
+        let current_buffer_index = self.eye_frame_buffers[eye].current_buffer;
+        let eye_command_buffers = &self.eye_command_buffers[eye as usize];
+        let command_buffer = eye_command_buffers[current_buffer_index];
 
-        let eye_command_buffers = self.eye_command_buffers.get(eye as usize).unwrap();
-
-        let signal_semaphores = [*render_finished_semaphore];
+        // let signal_semaphores = [*render_finished_semaphore];
 
         let submit_info = vk::SubmitInfo::builder()
-            .command_buffers(&eye_command_buffers)
+            .command_buffers(&[command_buffer])
+            // .wait_dst_stage_mask(&wait_stages)
             // .wait_semaphores(&wait_semaphores)
-            .wait_dst_stage_mask(&wait_stages)
-            .signal_semaphores(&signal_semaphores)
+            // .signal_semaphores(&signal_semaphores)
             .build();
 
         let submits = [submit_info];
 
-        // self.images_in_flight[image_index as usize] = None;
-        unsafe { self.context.device.reset_fences(&fences) }.expect("Unable to reset fences");
+        // sync_objects.images_in_flight[self.current_frame as usize] = None;
+        // unsafe { self.context.device.reset_fences(&fences) }.expect("Unable to reset fences");
         unsafe {
             self.context
                 .device
-                .queue_submit(self.context.graphics_queue, &submits, *fence)
+                .queue_submit(self.context.graphics_queue, &submits, vk::Fence::null())
                 .expect("Unable to submit to queue")
         };
+
+        self.eye_frame_buffers[eye].current_buffer = (current_buffer_index + 1) % 3;
     }
 
     pub unsafe fn render_loading_scene(&mut self, ovr_mobile: NonNull<ovrMobile>) -> () {
@@ -233,5 +230,6 @@ impl VulkanRenderer {
         // Hand over the eye images to the time warp.
         let result = vrapi_SubmitFrame2(ovr_mobile, &frame_desc);
         assert_eq!(0, result);
+        println!("[Renderer] ..done, now rendering first real frames.");
     }
 }
