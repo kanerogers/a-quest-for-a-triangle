@@ -197,12 +197,12 @@ impl VulkanContext {
         let subresource_range = vk::ImageSubresourceRange::builder()
             .aspect_mask(aspect_mask)
             .level_count(1)
-            .layer_count(2)
+            .layer_count(1)
             .build();
 
         let create_info = vk::ImageViewCreateInfo::builder()
             .image(*image)
-            .view_type(vk::ImageViewType::TYPE_2D_ARRAY)
+            .view_type(vk::ImageViewType::TYPE_2D)
             .format(color_format)
             .components(components)
             .subresource_range(subresource_range);

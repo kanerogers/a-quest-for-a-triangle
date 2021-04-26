@@ -245,8 +245,16 @@ impl VulkanRenderer {
         let end_layout = vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
         let begin_stage =
             vk::PipelineStageFlags::VERTEX_SHADER | vk::PipelineStageFlags::FRAGMENT_SHADER;
-        let end_stage = vk::PipelineStageFlags::TOP_OF_PIPE;
+        let end_stage = vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT;
 
+        unsafe {
+            device
+                .reset_command_buffer(command_buffer, vk::CommandBufferResetFlags::empty())
+                .expect("Unable to reset command buffer");
+            device
+                .begin_command_buffer(command_buffer, &begin_info)
+                .expect("Unable to begin command buffer");
+        }
         self.context.change_image_layout(
             command_buffer,
             &texture.image,
@@ -259,12 +267,6 @@ impl VulkanRenderer {
         );
 
         unsafe {
-            device
-                .reset_command_buffer(command_buffer, vk::CommandBufferResetFlags::empty())
-                .expect("Unable to reset command buffer");
-            device
-                .begin_command_buffer(command_buffer, &begin_info)
-                .expect("Unable to begin command buffer");
             device.cmd_begin_render_pass(
                 command_buffer,
                 &render_pass_info,
@@ -274,6 +276,7 @@ impl VulkanRenderer {
             device.cmd_set_scissor(command_buffer, 0, &[scissor]);
             device.cmd_bind_pipeline(command_buffer, vk::PipelineBindPoint::GRAPHICS, pipeline);
             device.cmd_draw(command_buffer, 3, 1, 0, 0);
+            device.cmd_end_render_pass(command_buffer);
         }
 
         self.context.change_image_layout(
@@ -288,7 +291,6 @@ impl VulkanRenderer {
         );
 
         unsafe {
-            device.cmd_end_render_pass(command_buffer);
             device
                 .end_command_buffer(command_buffer)
                 .expect("Unable to record command buffer!");
