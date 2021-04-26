@@ -1,4 +1,7 @@
-use crate::old_vulkan::{create_graphics_pipeline, SyncObjects};
+use crate::{
+    eye_command_buffer::EyeCommandBuffer,
+    old_vulkan::{create_graphics_pipeline, SyncObjects},
+};
 use crate::{
     eye_frame_buffer::EyeFrameBuffer,
     eye_texture_swap_chain::EyeTextureSwapChain,
@@ -28,15 +31,18 @@ pub struct VulkanRenderer {
     pub context: VulkanContext,
     pub current_frame: usize,
     pub render_pass: RenderPass,
-    pub eye_command_buffers: [Vec<vk::CommandBuffer>; 2],
+    pub eye_command_buffers: [EyeCommandBuffer; 2],
     pub eye_frame_buffers: [EyeFrameBuffer; 2],
     pub sync_objects: [SyncObjects; 2],
+    pub extent: vk::Extent2D,
+    pub graphics_pipeline: vk::Pipeline,
 }
 
 impl VulkanRenderer {
     pub unsafe fn new(java: &ovrJava) -> Self {
         println!("[VulkanRenderer] Initialising renderer..");
         let context = VulkanContext::new();
+        let buffers_count = 3;
         let width = vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH);
         let height = vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT);
         let extent = vk::Extent2D {
@@ -71,27 +77,13 @@ impl VulkanRenderer {
             create_graphics_pipeline(&context.device, extent, render_pass.render_pass);
 
         let eye_command_buffers = [
-            create_command_buffers(
-                &context.device,
-                &eye_frame_buffers[0].frame_buffers,
-                context.command_pool,
-                render_pass.render_pass,
-                extent,
-                graphics_pipeline,
-            ),
-            create_command_buffers(
-                &context.device,
-                &eye_frame_buffers[1].frame_buffers,
-                context.command_pool,
-                render_pass.render_pass,
-                extent,
-                graphics_pipeline,
-            ),
+            EyeCommandBuffer::new(buffers_count, &context),
+            EyeCommandBuffer::new(buffers_count, &context),
         ];
 
         let sync_objects = [
-            create_sync_objects(&context.device, 3),
-            create_sync_objects(&context.device, 3),
+            create_sync_objects(&context.device, buffers_count),
+            create_sync_objects(&context.device, buffers_count),
         ];
 
         println!("[VulkanRenderer] ..done! Renderer initialized");
@@ -103,6 +95,8 @@ impl VulkanRenderer {
             eye_command_buffers,
             eye_frame_buffers,
             sync_objects,
+            extent,
+            graphics_pipeline,
         }
     }
 
@@ -148,44 +142,21 @@ impl VulkanRenderer {
     }
 
     pub fn draw_frame(&mut self, eye: usize) {
-        let sync_objects = &mut self.sync_objects[eye];
-        // let fence = sync_objects
-        //     .in_flight_fences
-        //     .get(self.current_frame)
-        //     .expect("Unable to get fence!");
-        // let fences = [*fence];
+        let eye_frame_buffers = &self.eye_frame_buffers[eye];
+        let eye_command_buffer = &self.eye_command_buffers[eye as usize];
 
-        // unsafe { self.context.device.wait_for_fences(&fences, true, u64::MAX) }
-        //     .expect("Unable to wait for fence");
+        let current_buffer_index = eye_frame_buffers.current_buffer;
+        let current_command_buffer = eye_command_buffer.command_buffers[current_buffer_index];
+        let current_frame_buffer = eye_frame_buffers.frame_buffers[current_buffer_index];
 
-        // let image_available_semaphore = sync_objects
-        //     .image_available_semaphores
-        //     .get(self.current_frame)
-        //     .expect("Unable to get image_available semaphore for frame!");
-        // let render_finished_semaphore = sync_objects
-        //     .render_finished_semaphores
-        //     .get(self.current_frame)
-        //     .expect("Unable to get render_finished semaphore");
-
-        // let wait_semaphores = [*image_available_semaphore];
-        // let wait_stages = [vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
-        let current_buffer_index = self.eye_frame_buffers[eye].current_buffer;
-        let eye_command_buffers = &self.eye_command_buffers[eye as usize];
-        let command_buffer = eye_command_buffers[current_buffer_index];
-
-        // let signal_semaphores = [*render_finished_semaphore];
+        self.write_command_buffer(current_command_buffer, current_frame_buffer);
 
         let submit_info = vk::SubmitInfo::builder()
-            .command_buffers(&[command_buffer])
-            // .wait_dst_stage_mask(&wait_stages)
-            // .wait_semaphores(&wait_semaphores)
-            // .signal_semaphores(&signal_semaphores)
+            .command_buffers(&[current_command_buffer])
             .build();
 
         let submits = [submit_info];
 
-        // sync_objects.images_in_flight[self.current_frame as usize] = None;
-        // unsafe { self.context.device.reset_fences(&fences) }.expect("Unable to reset fences");
         unsafe {
             self.context
                 .device
@@ -194,6 +165,57 @@ impl VulkanRenderer {
         };
 
         self.eye_frame_buffers[eye].current_buffer = (current_buffer_index + 1) % 3;
+    }
+
+    pub fn write_command_buffer(
+        &mut self,
+        command_buffer: vk::CommandBuffer,
+        frame_buffer: vk::Framebuffer,
+    ) {
+        let extent = self.extent;
+        let device = &self.context.device;
+        let begin_info = vk::CommandBufferBeginInfo::builder()
+            .flags(vk::CommandBufferUsageFlags::SIMULTANEOUS_USE);
+        let render_pass = self.render_pass.render_pass;
+        let pipeline = self.graphics_pipeline;
+
+        unsafe {
+            device
+                .begin_command_buffer(command_buffer, &begin_info)
+                .expect("Unable to begin command buffer");
+        }
+        let render_area = vk::Rect2D {
+            offset: vk::Offset2D { x: 0, y: 0 },
+            extent,
+        };
+
+        let clear_color = vk::ClearValue {
+            color: vk::ClearColorValue {
+                float32: [0.0, 0.0, 0.0, 0.0],
+            },
+        };
+
+        let clear_colors = [clear_color];
+
+        let render_pass_info = vk::RenderPassBeginInfo::builder()
+            .render_pass(render_pass)
+            .framebuffer(frame_buffer)
+            .render_area(render_area)
+            .clear_values(&clear_colors);
+
+        unsafe {
+            device.cmd_begin_render_pass(
+                command_buffer,
+                &render_pass_info,
+                vk::SubpassContents::INLINE,
+            );
+            device.cmd_bind_pipeline(command_buffer, vk::PipelineBindPoint::GRAPHICS, pipeline);
+            device.cmd_draw(command_buffer, 3, 1, 0, 0);
+            device.cmd_end_render_pass(command_buffer);
+            device
+                .end_command_buffer(command_buffer)
+                .expect("Unable to record command buffer!");
+        }
     }
 
     pub unsafe fn render_loading_scene(&mut self, ovr_mobile: NonNull<ovrMobile>) -> () {

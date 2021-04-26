@@ -3,7 +3,6 @@ use ovr_mobile_sys::ovrTextureSwapChain;
 use std::ptr::NonNull;
 
 use crate::{
-    depth_buffer::DepthBuffer,
     eye_texture_swap_chain::EyeTextureSwapChain,
     render_pass::RenderPass,
     texture::{Texture, TextureUsageFlags},
@@ -61,6 +60,16 @@ impl EyeFrameBuffer {
             current_buffer: 0,
             current_layer: 0,
         }
+    }
+}
+
+fn create_fence(context: &VulkanContext) -> vk::Fence {
+    unsafe {
+        let create_info = vk::FenceCreateInfo::builder();
+        context
+            .device
+            .create_fence(&create_info, None)
+            .expect("Unable to create fence")
     }
 }
 
