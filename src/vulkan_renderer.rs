@@ -7,6 +7,7 @@ use crate::{
     eye_frame_buffer::EyeFrameBuffer, eye_texture_swap_chain::EyeTextureSwapChain,
     old_vulkan::create_sync_objects, render_pass::RenderPass, vulkan_context::VulkanContext,
 };
+use ovr_mobile_sys::helpers::vrapi_DefaultLayerCylinder2;
 
 use ash::{version::DeviceV1_0, vk};
 use ovr_mobile_sys::{
@@ -108,7 +109,7 @@ impl VulkanRenderer {
         let predicted_display_time =
             vrapi_GetPredictedDisplayTime(ovr_mobile, self.current_frame as i64);
         let tracking = vrapi_GetPredictedTracking2(ovr_mobile, predicted_display_time);
-        let mut layer = vrapi_DefaultLayerProjection2();
+        let mut layer = vrapi_DefaultLayerCylinder2();
 
         for eye in 0..2 {
             self.draw_frame(eye);
@@ -255,6 +256,7 @@ impl VulkanRenderer {
                 .begin_command_buffer(command_buffer, &begin_info)
                 .expect("Unable to begin command buffer");
         }
+
         self.context.change_image_layout(
             command_buffer,
             &texture.image,

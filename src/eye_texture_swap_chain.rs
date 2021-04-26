@@ -43,16 +43,16 @@ impl EyeTextureSwapChain {
         let swapchain_length = vrapi_GetTextureSwapChainLength(swapchain_handle);
         assert_eq!(images_count, swapchain_length);
 
-        // These are the images that will be ultimately displayed to the user's eyes.
-        let mut display_images = Vec::with_capacity(swapchain_length as usize);
-
         // Retrieve images from the newly created swapchain
-        for i in 0..swapchain_length as usize {
-            println!("[EyeTextureSwapChain] Getting SwapChain images..");
-            let image_handle = vrapi_GetTextureSwapChainBufferVulkan(swapchain_handle, i as i32);
-            display_images.push(vk::Image::from_raw(image_handle as u64));
-            println!("[EyeTextureSwapChain] ..done!");
-        }
+        let display_images = (0..swapchain_length)
+            .map(|i| {
+                println!("[EyeTextureSwapChain] Getting SwapChain images..");
+                let image_handle =
+                    vrapi_GetTextureSwapChainBufferVulkan(swapchain_handle, i as i32);
+                println!("[EyeTextureSwapChain] ..done!");
+                vk::Image::from_raw(image_handle as u64)
+            })
+            .collect::<Vec<_>>();
 
         println!("[EyeTextureSwapChain] All done! TextureSwapChain created!");
 

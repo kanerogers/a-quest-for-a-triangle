@@ -79,7 +79,8 @@ impl Texture {
         let aspect_mask = vk::ImageAspectFlags::COLOR;
         let src_flags = vk::AccessFlags::empty();
         let old_layout = vk::ImageLayout::UNDEFINED;
-        let stage = vk::PipelineStageFlags::TOP_OF_PIPE;
+        let start_stage = vk::PipelineStageFlags::TOP_OF_PIPE;
+        let end_stage = vk::PipelineStageFlags::ALL_GRAPHICS;
         let setup_command_buffer = context.create_setup_command_buffer();
 
         context.change_image_layout(
@@ -89,8 +90,8 @@ impl Texture {
             dst_flags,
             old_layout,
             image_layout,
-            stage,
-            stage,
+            start_stage,
+            end_stage,
         );
 
         context.flush_setup_command_buffer(setup_command_buffer);
@@ -104,11 +105,11 @@ impl Texture {
         let filter = TextureFilter::OvrTextureFilterLinear;
 
         // If necessary, create a sampler.
-        if usage != TextureUsageFlags::OVR_TEXTURE_USAGE_COLOR_ATTACHMENT {
-            sampler = create_sampler(context, wrap_mode, filter, max_anisotropy, mip_count);
-        } else {
-            sampler = vk::Sampler::null();
-        }
+        // if usage != TextureUsageFlags::OVR_TEXTURE_USAGE_COLOR_ATTACHMENT {
+        //     sampler = create_sampler(context, wrap_mode, filter, max_anisotropy, mip_count);
+        // } else {
+        sampler = vk::Sampler::null();
+        // }
 
         let memory = vk::DeviceMemory::null();
 
