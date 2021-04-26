@@ -2,8 +2,8 @@
 #![allow(unused_variables)]
 
 use ash::{Device, Entry, Instance, extensions::ext, extensions::khr, version::{DeviceV1_0, EntryV1_0, InstanceV1_0}, vk::{self, SurfaceKHR, Window}};
-use std::{ffi:: { CStr, CString}};
-use byte_slice_cast::AsSliceOf;
+use std::{ffi:: { CStr, CString}, mem};
+use byte_slice_cast::{AsByteSlice, AsSliceOf};
 
 pub(crate) const MAX_FRAMES_IN_FLIGHT:usize = 2;
 
@@ -507,8 +507,9 @@ pub fn create_graphics_pipeline(device: &Device, extent: vk::Extent2D, render_pa
 }
 
 fn create_shader_module(device: &Device, bytes: &[u8]) -> vk::ShaderModule {
+    let (_, code, _) = unsafe { bytes.align_to::<u32>() };
     let create_info = vk::ShaderModuleCreateInfo::builder()
-        .code(bytes.as_slice_of::<u32>().unwrap());
+        .code(code);
 
     unsafe { device.create_shader_module(&create_info, None).expect("Unable to create shader module") }
 }

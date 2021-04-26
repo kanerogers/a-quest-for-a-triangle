@@ -1,12 +1,17 @@
 use ash::{version::DeviceV1_0, vk};
 
 use crate::vulkan_context::VulkanContext;
+#[derive(Copy, Clone, Debug)]
+pub struct Fence {
+    pub fence: vk::Fence,
+    pub submitted: bool,
+}
 
 pub struct EyeCommandBuffer {
     pub num_buffers: usize,
     pub current_buffer: usize,
     pub command_buffers: Vec<vk::CommandBuffer>,
-    pub fences: Vec<vk::Fence>,
+    pub fences: Vec<Fence>,
 }
 
 impl EyeCommandBuffer {
@@ -29,13 +34,17 @@ impl EyeCommandBuffer {
     }
 }
 
-fn create_fence(context: &VulkanContext) -> vk::Fence {
+fn create_fence(context: &VulkanContext) -> Fence {
     let create_info = vk::FenceCreateInfo::builder();
-    unsafe {
+    let fence = unsafe {
         context
             .device
             .create_fence(&create_info, None)
             .expect("Unable to create fence")
+    };
+    Fence {
+        fence,
+        submitted: false,
     }
 }
 

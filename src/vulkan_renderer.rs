@@ -3,11 +3,8 @@ use crate::{
     old_vulkan::{create_graphics_pipeline, SyncObjects},
 };
 use crate::{
-    eye_frame_buffer::EyeFrameBuffer,
-    eye_texture_swap_chain::EyeTextureSwapChain,
-    old_vulkan::{create_command_buffers, create_sync_objects},
-    render_pass::RenderPass,
-    vulkan_context::VulkanContext,
+    eye_frame_buffer::EyeFrameBuffer, eye_texture_swap_chain::EyeTextureSwapChain,
+    old_vulkan::create_sync_objects, render_pass::RenderPass, vulkan_context::VulkanContext,
 };
 
 use ash::{version::DeviceV1_0, vk};
@@ -143,13 +140,33 @@ impl VulkanRenderer {
 
     pub fn draw_frame(&mut self, eye: usize) {
         let eye_frame_buffers = &self.eye_frame_buffers[eye];
-        let eye_command_buffer = &self.eye_command_buffers[eye as usize];
+        let eye_command_buffer = &mut self.eye_command_buffers[eye as usize];
 
         let current_buffer_index = eye_frame_buffers.current_buffer;
         let current_command_buffer = eye_command_buffer.command_buffers[current_buffer_index];
         let current_frame_buffer = eye_frame_buffers.frame_buffers[current_buffer_index];
 
+        {
+            let fence = &mut eye_command_buffer.fences[current_buffer_index];
+            if fence.submitted {
+                unsafe {
+                    self.context
+                        .device
+                        .wait_for_fences(&[fence.fence], true, u64::MAX)
+                        .expect("Unable to wait for fence");
+                    self.context
+                        .device
+                        .reset_fences(&[fence.fence])
+                        .expect("Unable to reset fence");
+                    fence.submitted = false;
+                };
+            }
+        }
+
         self.write_command_buffer(current_command_buffer, current_frame_buffer);
+
+        let eye_command_buffer = &mut self.eye_command_buffers[eye as usize];
+        let fence = &mut eye_command_buffer.fences[current_buffer_index];
 
         let submit_info = vk::SubmitInfo::builder()
             .command_buffers(&[current_command_buffer])
@@ -160,10 +177,11 @@ impl VulkanRenderer {
         unsafe {
             self.context
                 .device
-                .queue_submit(self.context.graphics_queue, &submits, vk::Fence::null())
-                .expect("Unable to submit to queue")
+                .queue_submit(self.context.graphics_queue, &submits, fence.fence)
+                .expect("Unable to submit to queue");
         };
 
+        fence.submitted = true;
         self.eye_frame_buffers[eye].current_buffer = (current_buffer_index + 1) % 3;
     }
 
@@ -174,41 +192,44 @@ impl VulkanRenderer {
     ) {
         let extent = self.extent;
         let device = &self.context.device;
-        let begin_info = vk::CommandBufferBeginInfo::builder()
-            .flags(vk::CommandBufferUsageFlags::SIMULTANEOUS_USE);
+        let begin_info = vk::CommandBufferBeginInfo::builder();
         let render_pass = self.render_pass.render_pass;
         let pipeline = self.graphics_pipeline;
-
-        unsafe {
-            device
-                .begin_command_buffer(command_buffer, &begin_info)
-                .expect("Unable to begin command buffer");
-        }
         let render_area = vk::Rect2D {
             offset: vk::Offset2D { x: 0, y: 0 },
             extent,
         };
-
         let clear_color = vk::ClearValue {
             color: vk::ClearColorValue {
                 float32: [0.0, 0.0, 0.0, 0.0],
             },
         };
-
         let clear_colors = [clear_color];
-
         let render_pass_info = vk::RenderPassBeginInfo::builder()
             .render_pass(render_pass)
             .framebuffer(frame_buffer)
             .render_area(render_area)
             .clear_values(&clear_colors);
+        let viewport = vk::Viewport::builder()
+            .width(extent.width as f32)
+            .height(extent.height as f32)
+            .build();
+        let scissor = vk::Rect2D::builder().extent(extent).build();
 
         unsafe {
+            device
+                .reset_command_buffer(command_buffer, vk::CommandBufferResetFlags::empty())
+                .expect("Unable to reset command buffer");
+            device
+                .begin_command_buffer(command_buffer, &begin_info)
+                .expect("Unable to begin command buffer");
             device.cmd_begin_render_pass(
                 command_buffer,
                 &render_pass_info,
                 vk::SubpassContents::INLINE,
             );
+            device.cmd_set_viewport(command_buffer, 0, &[viewport]);
+            device.cmd_set_scissor(command_buffer, 0, &[scissor]);
             device.cmd_bind_pipeline(command_buffer, vk::PipelineBindPoint::GRAPHICS, pipeline);
             device.cmd_draw(command_buffer, 3, 1, 0, 0);
             device.cmd_end_render_pass(command_buffer);
