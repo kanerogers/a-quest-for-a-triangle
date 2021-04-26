@@ -1,7 +1,7 @@
 use ash::{version::DeviceV1_0, vk};
 
 use crate::vulkan_context::VulkanContext;
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct Fence {
     pub fence: vk::Fence,
     pub submitted: bool,

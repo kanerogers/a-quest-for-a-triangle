@@ -145,10 +145,15 @@ impl VulkanRenderer {
         let current_buffer_index = eye_frame_buffers.current_buffer;
         let current_command_buffer = eye_command_buffer.command_buffers[current_buffer_index];
         let current_frame_buffer = eye_frame_buffers.frame_buffers[current_buffer_index];
+        println!(
+            "[Frame {}], index: {} command_buffer {:?}",
+            self.current_frame, current_buffer_index, current_command_buffer
+        );
 
         {
             let fence = &mut eye_command_buffer.fences[current_buffer_index];
             if fence.submitted {
+                println!("[FENCE] Waiting for fence {:?}", fence.fence);
                 unsafe {
                     self.context
                         .device

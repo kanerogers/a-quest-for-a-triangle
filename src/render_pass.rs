@@ -105,15 +105,11 @@ pub fn no_create_render_pass(
     let subpass = vk::SubpassDescription::builder()
         .pipeline_bind_point(vk::PipelineBindPoint::GRAPHICS)
         .color_attachments(&color_attachment_refs)
-        .resolve_attachments(&resolve_attachment_refs)
-        .depth_stencil_attachment(&depth_attachment_ref)
         .build();
     let subpasses = [subpass];
 
     let attachments = [
         color_attachment,
-        resolve_attachment,
-        depth_attachment,
         // fragment_density_attachment, // TODO: FFR
     ];
 
