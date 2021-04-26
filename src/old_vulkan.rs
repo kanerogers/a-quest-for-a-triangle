@@ -2,8 +2,7 @@
 #![allow(unused_variables)]
 
 use ash::{Device, Entry, Instance, extensions::ext, extensions::khr, version::{DeviceV1_0, EntryV1_0, InstanceV1_0}, vk::{self, SurfaceKHR, Window}};
-use std::{ffi:: { CStr, CString}, mem};
-use byte_slice_cast::{AsByteSlice, AsSliceOf};
+use std::{ffi:: { CStr, CString}};
 
 pub(crate) const MAX_FRAMES_IN_FLIGHT:usize = 2;
 

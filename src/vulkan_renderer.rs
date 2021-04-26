@@ -1,6 +1,7 @@
 use crate::{
     eye_command_buffer::EyeCommandBuffer,
     old_vulkan::{create_graphics_pipeline, SyncObjects},
+    texture::Texture,
 };
 use crate::{
     eye_frame_buffer::EyeFrameBuffer, eye_texture_swap_chain::EyeTextureSwapChain,
@@ -143,36 +144,31 @@ impl VulkanRenderer {
     }
 
     pub fn draw_frame(&mut self, eye: usize) {
+        {
+            let eye_frame_buffers = &self.eye_frame_buffers[eye];
+            let current_buffer_index = eye_frame_buffers.current_buffer_index;
+            self.wait_for_fence(eye, current_buffer_index);
+        }
+
         let eye_frame_buffers = &self.eye_frame_buffers[eye];
+        let current_buffer_index = eye_frame_buffers.current_buffer_index;
         let eye_command_buffer = &mut self.eye_command_buffers[eye as usize];
 
-        let current_buffer_index = eye_frame_buffers.current_buffer_index;
         let current_command_buffer = eye_command_buffer.command_buffers[current_buffer_index];
         let current_frame_buffer = eye_frame_buffers.frame_buffers[current_buffer_index];
+        let current_texture = &eye_frame_buffers.display_textures[current_buffer_index];
         println!(
             "[Frame {}], index: {} command_buffer {:?}",
             self.current_frame, current_buffer_index, current_command_buffer
         );
 
         {
-            let fence = &mut eye_command_buffer.fences[current_buffer_index];
-            if fence.submitted {
-                println!("[FENCE] Waiting for fence {:?}", fence.fence);
-                unsafe {
-                    self.context
-                        .device
-                        .wait_for_fences(&[fence.fence], true, u64::MAX)
-                        .expect("Unable to wait for fence");
-                    self.context
-                        .device
-                        .reset_fences(&[fence.fence])
-                        .expect("Unable to reset fence");
-                    fence.submitted = false;
-                };
-            }
+            self.write_command_buffer(
+                current_texture,
+                current_command_buffer,
+                current_frame_buffer,
+            );
         }
-
-        self.write_command_buffer(current_command_buffer, current_frame_buffer);
 
         let eye_command_buffer = &mut self.eye_command_buffers[eye as usize];
         let fence = &mut eye_command_buffer.fences[current_buffer_index];
@@ -193,8 +189,28 @@ impl VulkanRenderer {
         fence.submitted = true;
     }
 
+    fn wait_for_fence(&mut self, eye: usize, current_buffer_index: usize) {
+        let eye_command_buffer = &mut self.eye_command_buffers[eye as usize];
+        let fence = &mut eye_command_buffer.fences[current_buffer_index];
+        if fence.submitted {
+            println!("[FENCE] Waiting for fence {:?}", fence.fence);
+            unsafe {
+                self.context
+                    .device
+                    .wait_for_fences(&[fence.fence], true, u64::MAX)
+                    .expect("Unable to wait for fence");
+                self.context
+                    .device
+                    .reset_fences(&[fence.fence])
+                    .expect("Unable to reset fence");
+                fence.submitted = false;
+            };
+        }
+    }
+
     pub fn write_command_buffer(
-        &mut self,
+        &self,
+        texture: &Texture,
         command_buffer: vk::CommandBuffer,
         frame_buffer: vk::Framebuffer,
     ) {
@@ -203,10 +219,8 @@ impl VulkanRenderer {
         let begin_info = vk::CommandBufferBeginInfo::builder();
         let render_pass = self.render_pass.render_pass;
         let pipeline = self.graphics_pipeline;
-        let render_area = vk::Rect2D {
-            offset: vk::Offset2D { x: 0, y: 0 },
-            extent,
-        };
+        let offset = vk::Offset2D { x: 0, y: 0 };
+        let render_area = vk::Rect2D { offset, extent };
         let clear_color = vk::ClearValue {
             color: vk::ClearColorValue {
                 float32: [0.0, 0.0, 0.0, 0.0],
@@ -224,6 +238,26 @@ impl VulkanRenderer {
             .build();
         let scissor = vk::Rect2D::builder().extent(extent).build();
 
+        let begin_flags = vk::AccessFlags::SHADER_READ;
+        let end_flags =
+            vk::AccessFlags::COLOR_ATTACHMENT_READ | vk::AccessFlags::COLOR_ATTACHMENT_WRITE;
+        let begin_layout = vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+        let end_layout = vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL;
+        let begin_stage =
+            vk::PipelineStageFlags::VERTEX_SHADER | vk::PipelineStageFlags::FRAGMENT_SHADER;
+        let end_stage = vk::PipelineStageFlags::TOP_OF_PIPE;
+
+        self.context.change_image_layout(
+            command_buffer,
+            &texture.image,
+            begin_flags,
+            end_flags,
+            begin_layout,
+            end_layout,
+            begin_stage,
+            end_stage,
+        );
+
         unsafe {
             device
                 .reset_command_buffer(command_buffer, vk::CommandBufferResetFlags::empty())
@@ -240,6 +274,20 @@ impl VulkanRenderer {
             device.cmd_set_scissor(command_buffer, 0, &[scissor]);
             device.cmd_bind_pipeline(command_buffer, vk::PipelineBindPoint::GRAPHICS, pipeline);
             device.cmd_draw(command_buffer, 3, 1, 0, 0);
+        }
+
+        self.context.change_image_layout(
+            command_buffer,
+            &texture.image,
+            end_flags,
+            begin_flags,
+            end_layout,
+            begin_layout,
+            end_stage,
+            begin_stage,
+        );
+
+        unsafe {
             device.cmd_end_render_pass(command_buffer);
             device
                 .end_command_buffer(command_buffer)

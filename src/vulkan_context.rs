@@ -70,15 +70,22 @@ impl VulkanContext {
 
     pub fn change_image_layout(
         &self,
+        command_buffer: vk::CommandBuffer,
         image: &vk::Image,
+        src_access_mask: vk::AccessFlags,
         dst_access_mask: vk::AccessFlags,
-        aspect_mask: vk::ImageAspectFlags,
+        old_layout: vk::ImageLayout,
         new_layout: vk::ImageLayout,
+        src_stage_mask: vk::PipelineStageFlags,
+        dst_stage_mask: vk::PipelineStageFlags,
     ) {
-        let command_buffer = self.create_setup_command_buffer();
+        println!(
+            "Changing {:?} from {:?} to {:?}",
+            image, old_layout, new_layout
+        );
 
         let subresource_range = vk::ImageSubresourceRange::builder()
-            .aspect_mask(aspect_mask)
+            .aspect_mask(vk::ImageAspectFlags::COLOR)
             .base_mip_level(0)
             .level_count(1)
             .base_array_layer(0)
@@ -86,16 +93,14 @@ impl VulkanContext {
             .build();
 
         let image_memory_barrier = vk::ImageMemoryBarrier::builder()
-            .src_access_mask(vk::AccessFlags::empty())
+            .src_access_mask(src_access_mask)
             .dst_access_mask(dst_access_mask)
-            .old_layout(vk::ImageLayout::UNDEFINED)
+            .old_layout(old_layout)
             .new_layout(new_layout)
             .image(*image)
             .subresource_range(subresource_range)
             .build();
 
-        let src_stage_mask = vk::PipelineStageFlags::TOP_OF_PIPE;
-        let dst_stage_mask = vk::PipelineStageFlags::ALL_GRAPHICS;
         let dependency_flags = vk::DependencyFlags::empty();
         let image_memory_barriers = [image_memory_barrier];
 
@@ -110,11 +115,9 @@ impl VulkanContext {
                 &image_memory_barriers,
             )
         };
-
-        self.flush_setup_command_buffer(command_buffer);
     }
 
-    pub fn create_image(
+    pub fn _create_image(
         &self,
         width: i32,
         height: i32,
@@ -233,7 +236,7 @@ impl VulkanContext {
         panic!("Unable to find suitable memory type index");
     }
 
-    fn create_setup_command_buffer(&self) -> vk::CommandBuffer {
+    pub fn create_setup_command_buffer(&self) -> vk::CommandBuffer {
         let allocate_info = vk::CommandBufferAllocateInfo::builder()
             .command_pool(self.command_pool)
             .level(vk::CommandBufferLevel::PRIMARY)
@@ -259,7 +262,7 @@ impl VulkanContext {
         return buffer;
     }
 
-    fn flush_setup_command_buffer(&self, command_buffer: vk::CommandBuffer) {
+    pub fn flush_setup_command_buffer(&self, command_buffer: vk::CommandBuffer) {
         unsafe {
             self.device
                 .end_command_buffer(command_buffer)

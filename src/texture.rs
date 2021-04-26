@@ -66,7 +66,7 @@ impl Texture {
         let image_layout = if usage == TextureUsageFlags::OVR_TEXTURE_USAGE_FRAG_DENSITY {
             vk::ImageLayout::FRAGMENT_DENSITY_MAP_OPTIMAL_EXT
         } else {
-            vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL
+            vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL
         };
 
         // Change the image layout to the most optimal for this kind of texture.
@@ -77,8 +77,23 @@ impl Texture {
             vk::AccessFlags::SHADER_READ
         };
         let aspect_mask = vk::ImageAspectFlags::COLOR;
+        let src_flags = vk::AccessFlags::empty();
+        let old_layout = vk::ImageLayout::UNDEFINED;
+        let stage = vk::PipelineStageFlags::TOP_OF_PIPE;
+        let setup_command_buffer = context.create_setup_command_buffer();
 
-        context.change_image_layout(image, dst_flags, aspect_mask, image_layout);
+        context.change_image_layout(
+            setup_command_buffer,
+            image,
+            src_flags,
+            dst_flags,
+            old_layout,
+            image_layout,
+            stage,
+            stage,
+        );
+
+        context.flush_setup_command_buffer(setup_command_buffer);
 
         // Great! Now create an image view.
         let view = context.create_image_view(image, color_format, aspect_mask);
@@ -120,10 +135,6 @@ impl Texture {
             view,
             sampler,
         }
-    }
-
-    pub fn change_usage(&self, _context: &VulkanContext, _usage: TextureUsageFlags) -> () {
-        println!("[Texture] Cowardly refusing to change usage.")
     }
 }
 
