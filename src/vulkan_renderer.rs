@@ -109,7 +109,7 @@ impl VulkanRenderer {
         let predicted_display_time =
             vrapi_GetPredictedDisplayTime(ovr_mobile, self.current_frame as i64);
         let tracking = vrapi_GetPredictedTracking2(ovr_mobile, predicted_display_time);
-        let mut layer = vrapi_DefaultLayerCylinder2();
+        let mut layer = vrapi_DefaultLayerProjection2();
 
         for eye in 0..2 {
             self.draw_frame(eye);

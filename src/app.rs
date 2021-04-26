@@ -115,7 +115,7 @@ impl App {
 
     fn enter_vr(&mut self) {
         println!("[App] Entering VR Mode..");
-        let flags = 0u32 | ovrModeFlags::VRAPI_MODE_FLAG_NATIVE_WINDOW as u32;
+        let flags = 0u32 | ovrModeFlags::VRAPI_MODE_FLAG_RESET_WINDOW_FULLSCREEN as u32;
         let mode_parms = ovrModeParms {
             Type: VRAPI_STRUCTURE_TYPE_MODE_PARMS_VULKAN,
             Flags: flags,
