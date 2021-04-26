@@ -114,7 +114,7 @@ impl VulkanRenderer {
             let mut texture = layer.Textures[eye];
             let eye_frame_buffer = &self.eye_frame_buffers[eye];
             texture.ColorSwapChain = eye_frame_buffer.swapchain_handle.as_ptr();
-            texture.SwapChainIndex = eye_frame_buffer.current_buffer as i32;
+            texture.SwapChainIndex = eye_frame_buffer.current_buffer_index as i32;
             texture.TexCoordsFromTanAngles =
                 ovrMatrix4f_TanAngleMatrixFromProjection(&tracking.Eye[eye].ProjectionMatrix);
         }
@@ -135,6 +135,10 @@ impl VulkanRenderer {
         // Hand over the eye images to the time warp.
         let result = vrapi_SubmitFrame2(ovr_mobile, &frame_desc);
         self.current_frame += 1;
+        for eye in 0..2 {
+            let current_buffer_index = self.eye_frame_buffers[eye].current_buffer_index;
+            self.eye_frame_buffers[eye].current_buffer_index = (current_buffer_index + 1) % 3;
+        }
         assert_eq!(0, result);
     }
 
@@ -142,7 +146,7 @@ impl VulkanRenderer {
         let eye_frame_buffers = &self.eye_frame_buffers[eye];
         let eye_command_buffer = &mut self.eye_command_buffers[eye as usize];
 
-        let current_buffer_index = eye_frame_buffers.current_buffer;
+        let current_buffer_index = eye_frame_buffers.current_buffer_index;
         let current_command_buffer = eye_command_buffer.command_buffers[current_buffer_index];
         let current_frame_buffer = eye_frame_buffers.frame_buffers[current_buffer_index];
         println!(
@@ -187,7 +191,6 @@ impl VulkanRenderer {
         };
 
         fence.submitted = true;
-        self.eye_frame_buffers[eye].current_buffer = (current_buffer_index + 1) % 3;
     }
 
     pub fn write_command_buffer(

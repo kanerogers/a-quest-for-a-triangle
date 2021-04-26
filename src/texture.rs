@@ -66,7 +66,7 @@ impl Texture {
         let image_layout = if usage == TextureUsageFlags::OVR_TEXTURE_USAGE_FRAG_DENSITY {
             vk::ImageLayout::FRAGMENT_DENSITY_MAP_OPTIMAL_EXT
         } else {
-            vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL
+            vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL
         };
 
         // Change the image layout to the most optimal for this kind of texture.

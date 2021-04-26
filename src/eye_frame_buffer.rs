@@ -18,7 +18,7 @@ pub struct EyeFrameBuffer {
     // pub render_texture: Texture,        // ??
     pub frame_buffers: Vec<vk::Framebuffer>, // ??
     pub num_layers: usize,
-    pub current_buffer: usize,
+    pub current_buffer_index: usize,
     pub current_layer: usize,
 }
 
@@ -57,19 +57,9 @@ impl EyeFrameBuffer {
             // render_texture,
             frame_buffers,
             num_layers: 2,
-            current_buffer: 0,
+            current_buffer_index: 0,
             current_layer: 0,
         }
-    }
-}
-
-fn create_fence(context: &VulkanContext) -> vk::Fence {
-    unsafe {
-        let create_info = vk::FenceCreateInfo::builder();
-        context
-            .device
-            .create_fence(&create_info, None)
-            .expect("Unable to create fence")
     }
 }
 
