@@ -428,30 +428,12 @@ pub fn create_graphics_pipeline(device: &Device, extent: vk::Extent2D, render_pa
         .topology(vk::PrimitiveTopology::TRIANGLE_LIST)
         .primitive_restart_enable(false);
     
-    let viewport = vk::Viewport::builder()
-        .x(0.0)
-        .y(0.0)
-        .width(extent.width as f32)
-        .height(extent.height as f32)
-        .min_depth(0.0)
-        .max_depth(1.0)
-        .build();
-
-    let viewports = [viewport];
-    
-    let offset = vk::Offset2D { x: 0, y: 0}; 
-    let scissor = vk::Rect2D::builder()
-        .offset(offset)
-        .extent(extent)
-        .build();
-
-    let scissors = [scissor];
-    
+    // TODO: This is a big difference between vulkan-tutorial and OVR - no viewport/scissor is created upfront.
     let viewport_state_create_info = vk::PipelineViewportStateCreateInfo::builder()
         .viewport_count(1)
-        .viewports(&viewports)
+        .viewports(&[])
         .scissor_count(1)
-        .scissors(&scissors);
+        .scissors(&[]);
     
     let rasterizer_create_info = vk::PipelineRasterizationStateCreateInfo::builder()
         .depth_clamp_enable(false)
@@ -467,16 +449,55 @@ pub fn create_graphics_pipeline(device: &Device, extent: vk::Extent2D, render_pa
         .rasterization_samples(vk::SampleCountFlags::TYPE_1)
         .min_sample_shading(1.0);
 
+    let front = vk::StencilOpState::builder()
+        .fail_op(vk::StencilOp::KEEP)
+        .pass_op(vk::StencilOp::KEEP)
+        .depth_fail_op(vk::StencilOp::KEEP)
+        .compare_op(vk::CompareOp::ALWAYS)
+        .build();
+
+    let back = vk::StencilOpState::builder()
+        .fail_op(vk::StencilOp::KEEP)
+        .pass_op(vk::StencilOp::KEEP)
+        .depth_fail_op(vk::StencilOp::KEEP)
+        .compare_op(vk::CompareOp::ALWAYS)
+        .build();
+
+    let depth_stencil_state = vk::PipelineDepthStencilStateCreateInfo::builder()
+        .depth_test_enable(true)
+        .depth_write_enable(true)
+        .depth_compare_op(vk::CompareOp::LESS_OR_EQUAL)
+        .front(front)
+        .back(back)
+        .min_depth_bounds(0.0)
+        .max_depth_bounds(1.0)
+        .build();
+
     let color_blend_attachment = vk::PipelineColorBlendAttachmentState::builder()
-        .color_write_mask(vk::ColorComponentFlags::R | vk::ColorComponentFlags::G | vk::ColorComponentFlags::B | vk::ColorComponentFlags::A)
         .blend_enable(false)
+        .src_color_blend_factor(vk::BlendFactor::ONE)
+        .dst_color_blend_factor(vk::BlendFactor::ZERO)
+        .color_blend_op(vk::BlendOp::ADD)
+        .src_alpha_blend_factor(vk::BlendFactor::ONE)
+        .dst_alpha_blend_factor(vk::BlendFactor::ZERO)
+        .alpha_blend_op(vk::BlendOp::ADD)
+        .color_write_mask(vk::ColorComponentFlags::R | vk::ColorComponentFlags::G | vk::ColorComponentFlags::B)
         .build();
 
     let color_blend_attachments = [color_blend_attachment];
 
+    let blend_constants = [0.0, 0.0, 0.0, 0.0];
+
     let color_blend_state = vk::PipelineColorBlendStateCreateInfo::builder()
         .logic_op_enable(false)
+        .logic_op(vk::LogicOp::CLEAR)
+        .blend_constants(blend_constants)
         .attachments(&color_blend_attachments);
+
+    let dynamic_states = [vk::DynamicState::VIEWPORT, vk::DynamicState::SCISSOR];
+    let dynamic_pipeline_state_create_info = vk::PipelineDynamicStateCreateInfo::builder()
+        .dynamic_states(&dynamic_states)
+        .build();
 
     let pipeline_layout_create_info = vk::PipelineLayoutCreateInfo::builder();
     let pipeline_layout = unsafe { device.create_pipeline_layout(&pipeline_layout_create_info, None).unwrap() };
@@ -488,7 +509,9 @@ pub fn create_graphics_pipeline(device: &Device, extent: vk::Extent2D, render_pa
         .viewport_state(&viewport_state_create_info)
         .rasterization_state(&rasterizer_create_info)
         .multisample_state(&multisampling_create_info)
+        .depth_stencil_state(&depth_stencil_state)
         .color_blend_state(&color_blend_state)
+        .dynamic_state(&dynamic_pipeline_state_create_info)
         .layout(pipeline_layout)
         .render_pass(render_pass)
         .subpass(0)
