@@ -79,7 +79,7 @@ impl VulkanContext {
         src_stage_mask: vk::PipelineStageFlags,
         dst_stage_mask: vk::PipelineStageFlags,
     ) {
-        let aspect_mask = if new_layout == vk::ImageLayout::DEPTH_ATTACHMENT_OPTIMAL {
+        let aspect_mask = if new_layout == vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL {
             vk::ImageAspectFlags::DEPTH | vk::ImageAspectFlags::STENCIL
         } else {
             vk::ImageAspectFlags::COLOR
@@ -118,7 +118,7 @@ impl VulkanContext {
         };
     }
 
-    pub fn _create_image(
+    pub fn create_image(
         &self,
         width: i32,
         height: i32,
