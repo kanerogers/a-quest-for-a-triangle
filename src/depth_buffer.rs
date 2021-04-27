@@ -22,7 +22,7 @@ impl DepthBuffer {
         let src_access_mask = vk::AccessFlags::empty();
         let dst_access_mask = vk::AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE;
         let old_layout = vk::ImageLayout::UNDEFINED;
-        let new_layout = vk::ImageLayout::DEPTH_ATTACHMENT_OPTIMAL;
+        let new_layout = vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         let start_stage = vk::PipelineStageFlags::TOP_OF_PIPE;
         let end_stage = vk::PipelineStageFlags::ALL_GRAPHICS;
 

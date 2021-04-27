@@ -15,7 +15,7 @@ impl RenderPass {
         let colour_format = vk::Format::R8G8B8A8_UNORM;
         let depth_format = vk::Format::D24_UNORM_S8_UINT;
         let sample_count = vk::SampleCountFlags::TYPE_1;
-        let render_pass = create_render_pass(device, colour_format, sample_count);
+        let render_pass = create_render_pass(device, colour_format, depth_format, sample_count);
         let clear_color = ovrVector4f {
             x: 0.125,
             y: 0.0,
@@ -36,6 +36,7 @@ impl RenderPass {
 pub fn create_render_pass(
     device: &Device,
     colour_format: vk::Format,
+    depth_format: vk::Format,
     sample_count: vk::SampleCountFlags,
 ) -> vk::RenderPass {
     println!("[RenderPass] Creating render pass..");
@@ -54,17 +55,32 @@ pub fn create_render_pass(
         .attachment(0)
         .layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
         .build();
-    let color_attachment_refs = [color_attachment_ref];
+
+    let depth_stencil_attachment = vk::AttachmentDescription::builder()
+        .format(depth_format)
+        .load_op(vk::AttachmentLoadOp::CLEAR)
+        .store_op(vk::AttachmentStoreOp::DONT_CARE)
+        .stencil_load_op(vk::AttachmentLoadOp::DONT_CARE)
+        .stencil_store_op(vk::AttachmentStoreOp::DONT_CARE)
+        .initial_layout(vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+        .final_layout(vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+        .build();
+    let depth_stencil_attachment_ref = vk::AttachmentReference::builder()
+        .attachment(1)
+        .layout(vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+        .build();
 
     let subpass = vk::SubpassDescription::builder()
         .pipeline_bind_point(vk::PipelineBindPoint::GRAPHICS)
-        .color_attachments(&color_attachment_refs)
+        .color_attachments(&[color_attachment_ref])
+        .depth_stencil_attachment(&depth_stencil_attachment_ref)
         .build();
     let subpasses = [subpass];
 
     let attachments = [
         color_attachment,
         // fragment_density_attachment, // TODO: FFR
+        depth_stencil_attachment,
     ];
 
     // TODO: Mutli View
