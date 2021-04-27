@@ -7,7 +7,6 @@ use crate::{
     eye_frame_buffer::EyeFrameBuffer, eye_texture_swap_chain::EyeTextureSwapChain,
     old_vulkan::create_sync_objects, render_pass::RenderPass, vulkan_context::VulkanContext,
 };
-use ovr_mobile_sys::helpers::vrapi_DefaultLayerCylinder2;
 
 use ash::{version::DeviceV1_0, vk};
 use ovr_mobile_sys::{
@@ -158,10 +157,6 @@ impl VulkanRenderer {
         let current_command_buffer = eye_command_buffer.command_buffers[current_buffer_index];
         let current_frame_buffer = eye_frame_buffers.frame_buffers[current_buffer_index];
         let current_texture = &eye_frame_buffers.display_textures[current_buffer_index];
-        println!(
-            "[Frame {}], index: {} command_buffer {:?}",
-            self.current_frame, current_buffer_index, current_command_buffer
-        );
 
         {
             self.write_command_buffer(
@@ -194,7 +189,6 @@ impl VulkanRenderer {
         let eye_command_buffer = &mut self.eye_command_buffers[eye as usize];
         let fence = &mut eye_command_buffer.fences[current_buffer_index];
         if fence.submitted {
-            println!("[FENCE] Waiting for fence {:?}", fence.fence);
             unsafe {
                 self.context
                     .device
@@ -224,7 +218,7 @@ impl VulkanRenderer {
         let render_area = vk::Rect2D { offset, extent };
         let clear_color = vk::ClearValue {
             color: vk::ClearColorValue {
-                float32: [0.0, 0.0, 0.0, 0.0],
+                float32: [0.125, 0.0, 0.125, 1.0],
             },
         };
         let clear_colors = [clear_color];

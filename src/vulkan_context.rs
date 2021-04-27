@@ -79,11 +79,6 @@ impl VulkanContext {
         src_stage_mask: vk::PipelineStageFlags,
         dst_stage_mask: vk::PipelineStageFlags,
     ) {
-        println!(
-            "Changing {:?} from {:?} to {:?}",
-            image, old_layout, new_layout
-        );
-
         let subresource_range = vk::ImageSubresourceRange::builder()
             .aspect_mask(vk::ImageAspectFlags::COLOR)
             .base_mip_level(0)
@@ -258,6 +253,8 @@ impl VulkanContext {
                 .begin_command_buffer(buffer, &begin_info)
                 .expect("Unable to begin command buffer")
         };
+
+        println!("[VulkanContext] Created setup command buffer {:?}", buffer);
 
         return buffer;
     }
