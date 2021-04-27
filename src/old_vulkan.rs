@@ -2,6 +2,7 @@
 #![allow(unused_variables)]
 
 use ash::{Device, Entry, Instance, extensions::ext, extensions::khr, version::{DeviceV1_0, EntryV1_0, InstanceV1_0}, vk::{self, SurfaceKHR, Window}};
+use byte_slice_cast::AsSliceOf;
 use std::{ffi:: { CStr, CString}};
 
 pub(crate) const MAX_FRAMES_IN_FLIGHT:usize = 2;
@@ -431,9 +432,7 @@ pub fn create_graphics_pipeline(device: &Device, pipeline_cache: &vk::PipelineCa
     // TODO: This is a big difference between vulkan-tutorial and OVR - no viewport/scissor is created upfront.
     let viewport_state_create_info = vk::PipelineViewportStateCreateInfo::builder()
         .viewport_count(1)
-        .viewports(&[])
-        .scissor_count(1)
-        .scissors(&[]);
+        .scissor_count(1);
     
     let rasterizer_create_info = vk::PipelineRasterizationStateCreateInfo::builder()
         .depth_clamp_enable(false)
@@ -529,9 +528,9 @@ pub fn create_graphics_pipeline(device: &Device, pipeline_cache: &vk::PipelineCa
 }
 
 fn create_shader_module(device: &Device, bytes: &[u8]) -> vk::ShaderModule {
-    let (_, code, _) = unsafe { bytes.align_to::<u32>() };
+    // let (_, code, _) = unsafe { bytes.align_to::<u32>() };
     let create_info = vk::ShaderModuleCreateInfo::builder()
-        .code(code);
+        .code(bytes.as_slice_of().unwrap());
 
     unsafe { device.create_shader_module(&create_info, None).expect("Unable to create shader module") }
 }
