@@ -58,6 +58,7 @@ pub fn create_render_pass(
 
     let depth_stencil_attachment = vk::AttachmentDescription::builder()
         .format(depth_format)
+        .samples(sample_count)
         .load_op(vk::AttachmentLoadOp::CLEAR)
         .store_op(vk::AttachmentStoreOp::DONT_CARE)
         .stencil_load_op(vk::AttachmentLoadOp::DONT_CARE)
