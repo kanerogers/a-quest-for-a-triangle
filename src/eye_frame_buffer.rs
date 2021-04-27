@@ -3,6 +3,7 @@ use ovr_mobile_sys::ovrTextureSwapChain;
 use std::ptr::NonNull;
 
 use crate::{
+    depth_buffer::DepthBuffer,
     eye_texture_swap_chain::EyeTextureSwapChain,
     render_pass::RenderPass,
     texture::{Texture, TextureUsageFlags},
@@ -40,9 +41,12 @@ impl EyeFrameBuffer {
             .map(|image| Texture::new(width, height, format, display_usage, image, context))
             .collect::<Vec<_>>();
 
+        let depth_format = render_pass.depth_format;
+        let depth_buffer = DepthBuffer::new(width, height, depth_format, context);
+
         let frame_buffers = display_textures
             .iter()
-            .map(|t| create_frame_buffer(t, render_pass, context))
+            .map(|t| create_frame_buffer(t, depth_buffer.view, render_pass, context))
             .collect::<Vec<_>>();
 
         let swapchain_handle = eye_texture_swap_chain.handle;
@@ -65,11 +69,11 @@ impl EyeFrameBuffer {
 
 fn create_frame_buffer(
     t: &Texture,
+    depth_buffer_view: vk::ImageView,
     render_pass: &RenderPass,
     context: &VulkanContext,
 ) -> vk::Framebuffer {
-    // let attachments = [render_image_view, t.view, depth_buffer_view];
-    let attachments = [t.view];
+    let attachments = [t.view, depth_buffer_view];
     let create_info = vk::FramebufferCreateInfo::builder()
         .attachments(&attachments)
         .width(t.width as u32)
@@ -96,9 +100,6 @@ fn create_frame_buffer(
 //     Texture::new(width, height, format, render_usage, &render_image, context);
 
 // render_texture.change_usage(context, render_usage);
-
-// let depth_format = render_pass.depth_format;
-// let depth_buffer = DepthBuffer::new(width, height, depth_format, context);
 
 // TODO: FFR
 // let ffr_usage = TextureUsageFlags::OVR_TEXTURE_USAGE_FRAG_DENSITY;
