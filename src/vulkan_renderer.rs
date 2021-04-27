@@ -31,7 +31,7 @@ pub struct VulkanRenderer {
     pub render_pass: RenderPass,
     pub eye_command_buffers: [EyeCommandBuffer; 2],
     pub eye_frame_buffers: [EyeFrameBuffer; 2],
-    pub sync_objects: [SyncObjects; 2],
+    // pub sync_objects: [SyncObjects; 2],
     pub extent: vk::Extent2D,
     pub graphics_pipeline: vk::Pipeline,
 }
@@ -71,18 +71,22 @@ impl VulkanRenderer {
             ),
         ];
 
-        let (_, graphics_pipeline) =
-            create_graphics_pipeline(&context.device, extent, render_pass.render_pass);
+        let (_, graphics_pipeline) = create_graphics_pipeline(
+            &context.device,
+            &context.pipeline_cache,
+            extent,
+            render_pass.render_pass,
+        );
 
         let eye_command_buffers = [
             EyeCommandBuffer::new(buffers_count, &context),
             EyeCommandBuffer::new(buffers_count, &context),
         ];
 
-        let sync_objects = [
-            create_sync_objects(&context.device, buffers_count),
-            create_sync_objects(&context.device, buffers_count),
-        ];
+        // let sync_objects = [
+        //     create_sync_objects(&context.device, buffers_count),
+        //     create_sync_objects(&context.device, buffers_count),
+        // ];
 
         println!("[VulkanRenderer] ..done! Renderer initialized");
 
@@ -92,7 +96,7 @@ impl VulkanRenderer {
             render_pass,
             eye_command_buffers,
             eye_frame_buffers,
-            sync_objects,
+            // sync_objects,
             extent,
             graphics_pipeline,
         }
@@ -100,8 +104,13 @@ impl VulkanRenderer {
 
     pub unsafe fn render(&mut self, ovr_mobile: NonNull<ovrMobile>) -> () {
         if self.current_frame == 0 {
-            self.current_frame += 1;
-            return self.render_loading_scene(ovr_mobile);
+            self.render_loading_scene(ovr_mobile);
+        }
+
+        self.current_frame += 1;
+        for eye in 0..2 {
+            let current_buffer_index = self.eye_frame_buffers[eye].current_buffer_index;
+            self.eye_frame_buffers[eye].current_buffer_index = (current_buffer_index + 1) % 3;
         }
 
         let ovr_mobile = ovr_mobile.as_ptr();
@@ -135,11 +144,6 @@ impl VulkanRenderer {
 
         // Hand over the eye images to the time warp.
         let result = vrapi_SubmitFrame2(ovr_mobile, &frame_desc);
-        self.current_frame += 1;
-        for eye in 0..2 {
-            let current_buffer_index = self.eye_frame_buffers[eye].current_buffer_index;
-            self.eye_frame_buffers[eye].current_buffer_index = (current_buffer_index + 1) % 3;
-        }
         assert_eq!(0, result);
     }
 
@@ -221,17 +225,27 @@ impl VulkanRenderer {
                 float32: [0.125, 0.0, 0.125, 1.0],
             },
         };
-        let clear_colors = [clear_color];
+        let depth_value = vk::ClearValue {
+            depth_stencil: vk::ClearDepthStencilValue {
+                depth: 1.0,
+                stencil: 0,
+            },
+        };
+        let clear_colors = [clear_color, depth_value];
         let render_pass_info = vk::RenderPassBeginInfo::builder()
             .render_pass(render_pass)
             .framebuffer(frame_buffer)
             .render_area(render_area)
             .clear_values(&clear_colors);
         let viewport = vk::Viewport::builder()
+            .x(0.0)
+            .y(0.0)
+            .min_depth(0.0)
+            .max_depth(1.0)
             .width(extent.width as f32)
             .height(extent.height as f32)
             .build();
-        let scissor = vk::Rect2D::builder().extent(extent).build();
+        let scissor = vk::Rect2D::builder().extent(extent).offset(offset).build();
 
         let begin_flags = vk::AccessFlags::SHADER_READ;
         let end_flags =

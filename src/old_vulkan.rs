@@ -119,7 +119,7 @@ impl HelloTriangleApplication {
         let mut swap_chain_images = get_swap_chain_images(&instance, &device, swap_chain);
         let swap_chain_image_views = create_image_views(&mut swap_chain_images, format, &device);
         let render_pass = create_render_pass(format, &device);
-        let (pipeline_layout, pipeline) = create_graphics_pipeline(&device, extent, render_pass);
+        let (pipeline_layout, pipeline) = create_graphics_pipeline(&device, &vk::PipelineCache::null(), extent, render_pass);
         let swap_chain_framebuffers = create_framebuffers(&swap_chain_image_views, &device, render_pass, extent);
         let command_pool = create_command_pool(indices.clone(), &device);
         let command_buffers = create_command_buffers(&device, &swap_chain_framebuffers, command_pool, render_pass, extent, pipeline);
@@ -401,7 +401,7 @@ pub fn create_command_buffers(device: &Device, swap_chain_framebuffers: &Vec<vk:
 }
 
 // Graphics Pipeline
-pub fn create_graphics_pipeline(device: &Device, extent: vk::Extent2D, render_pass: vk::RenderPass) -> (vk::PipelineLayout, vk::Pipeline) { 
+pub fn create_graphics_pipeline(device: &Device, pipeline_cache: &vk::PipelineCache, extent: vk::Extent2D, render_pass: vk::RenderPass) -> (vk::PipelineLayout, vk::Pipeline) { 
     let vert_shader_code = include_bytes!("./shaders/shader.vert.spv");
     let frag_shader_code = include_bytes!("./shaders/shader.frag.spv");
 
@@ -519,7 +519,7 @@ pub fn create_graphics_pipeline(device: &Device, extent: vk::Extent2D, render_pa
 
     let create_infos = [pipeline_create_info];
     
-    let mut graphics_pipelines = unsafe { device.create_graphics_pipelines(vk::PipelineCache::null(), &create_infos, None).unwrap() };
+    let mut graphics_pipelines = unsafe { device.create_graphics_pipelines(*pipeline_cache, &create_infos, None).unwrap() };
 
     // Cleanup
     unsafe { device.destroy_shader_module(vertex_shader_module, None) } ;
