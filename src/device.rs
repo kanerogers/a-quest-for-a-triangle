@@ -17,27 +17,18 @@ pub fn create_logical_device(
 ) -> (Device, vk::Queue, vk::Queue) {
     println!("[VulkanContext] Creating logical device.. ");
 
-    let queue_priorities = [1.0];
+    let queue_priorities = [0.5];
     let required_extensions_raw = cstrings_to_raw(required_extensions);
     let graphics_queue_create_info = vk::DeviceQueueCreateInfo::builder()
         .queue_priorities(&queue_priorities)
         .queue_family_index(indices.graphics_family.unwrap())
         .build();
 
-    let mut queue_create_infos = vec![graphics_queue_create_info];
-
-    if !indices.are_same() {
-        let present_queue_create_info = vk::DeviceQueueCreateInfo::builder()
-            .queue_priorities(&queue_priorities)
-            .queue_family_index(indices.present_family.unwrap())
-            .build();
-        queue_create_infos.push(present_queue_create_info);
-    }
+    let queue_create_infos = [graphics_queue_create_info];
 
     let physical_device_features = vk::PhysicalDeviceFeatures::builder();
-
     let device_create_info = vk::DeviceCreateInfo::builder()
-        .queue_create_infos(&queue_create_infos[..])
+        .queue_create_infos(&queue_create_infos)
         .enabled_extension_names(&required_extensions_raw)
         .enabled_features(&physical_device_features);
 

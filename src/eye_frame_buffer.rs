@@ -16,11 +16,8 @@ pub struct EyeFrameBuffer {
     pub swapchain_handle: NonNull<ovrTextureSwapChain>,
     pub swap_chain_length: i32,
     pub display_textures: Vec<Texture>, // textures that will be displayed to the user's eyes
-    // pub render_texture: Texture,        // ??
     pub frame_buffers: Vec<vk::Framebuffer>, // ??
-    pub num_layers: usize,
     pub current_buffer_index: usize,
-    pub current_layer: usize,
 }
 
 impl EyeFrameBuffer {
@@ -57,9 +54,7 @@ impl EyeFrameBuffer {
             swap_chain_length: eye_texture_swap_chain_length,
             display_textures,
             frame_buffers,
-            num_layers: 2,
             current_buffer_index: 0,
-            current_layer: 0,
         }
     }
 }

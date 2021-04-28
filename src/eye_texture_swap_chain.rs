@@ -1,8 +1,10 @@
 use crate::vulkan_renderer;
 use ash::vk::{self, Handle};
+use ovr_mobile_sys::ovrTextureType_::VRAPI_TEXTURE_TYPE_2D;
 use ovr_mobile_sys::{
-    ovrSwapChainCreateInfo_, ovrTextureSwapChain, vrapi_CreateTextureSwapChain4,
-    vrapi_GetTextureSwapChainBufferVulkan, vrapi_GetTextureSwapChainLength,
+    ovrSwapChainCreateInfo_, ovrTextureSwapChain, vrapi_CreateTextureSwapChain3,
+    vrapi_CreateTextureSwapChain4, vrapi_GetTextureSwapChainBufferVulkan,
+    vrapi_GetTextureSwapChainLength,
 };
 use std::ptr::NonNull;
 
@@ -17,18 +19,19 @@ pub struct EyeTextureSwapChain {
 
 impl EyeTextureSwapChain {
     pub unsafe fn new(width: i32, height: i32) -> EyeTextureSwapChain {
-        println!("[EyeTextureSwapChain] Creating TextureSwapChain..");
+        println!("[EyeTextureSwapChain] Creating EyeTextureSwapChain..");
 
         // Get required parameters for texture swapchain creation
         let levels = 1;
         let images_count = 3;
 
         // Create texture swapchain
-        println!("[EyeTextureSwapChain] Creating texture swapchain");
+        println!("[EyeTextureSwapChain] Creating ovrTextureSwapChain");
+        let colour_format = vulkan_renderer::COLOUR_FORMAT.as_raw() as i64;
 
         // This handle is an opaque type provided by VrApi.
         let create_info = ovrSwapChainCreateInfo_ {
-            Format: vulkan_renderer::COLOUR_FORMAT.as_raw() as i64,
+            Format: colour_format,
             Width: width,
             Height: height,
             Levels: levels,
@@ -38,7 +41,15 @@ impl EyeTextureSwapChain {
             CreateFlags: 0,
             UsageFlags: 0 | 0x1,
         };
-        let swapchain_handle = vrapi_CreateTextureSwapChain4(&create_info);
+        let swapchain_handle = vrapi_CreateTextureSwapChain3(
+            VRAPI_TEXTURE_TYPE_2D,
+            colour_format,
+            width,
+            height,
+            levels,
+            images_count,
+        );
+        // let swapchain_handle = vrapi_CreateTextureSwapChain4(&create_info);
 
         println!("[EyeTextureSwapChain] done!");
 
@@ -51,7 +62,7 @@ impl EyeTextureSwapChain {
                 println!("[EyeTextureSwapChain] Getting SwapChain images..");
                 let image_handle =
                     vrapi_GetTextureSwapChainBufferVulkan(swapchain_handle, i as i32);
-                println!("[EyeTextureSwapChain] ..done!");
+                println!("[EyeTextureSwapChain] handle is {:?}", image_handle);
                 vk::Image::from_raw(image_handle as u64)
             })
             .collect::<Vec<_>>();
