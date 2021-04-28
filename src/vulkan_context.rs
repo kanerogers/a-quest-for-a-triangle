@@ -3,7 +3,6 @@ use crate::{
     device::create_logical_device,
     physical_device::get_physical_device,
     util::cstrings_to_raw,
-    vulkan_renderer::COLOUR_FORMAT,
 };
 use ash::{
     version::{DeviceV1_0, EntryV1_0, InstanceV1_0},
@@ -119,7 +118,13 @@ impl VulkanContext {
         };
     }
 
-    pub fn create_image(&self, width: i32, height: i32, usage: vk::ImageUsageFlags) -> vk::Image {
+    pub fn create_image(
+        &self,
+        width: i32,
+        height: i32,
+        format: vk::Format,
+        usage: vk::ImageUsageFlags,
+    ) -> vk::Image {
         let device = &self.device;
         println!("[VulkanContext] Creating image..");
 
@@ -135,7 +140,7 @@ impl VulkanContext {
 
         let create_info = vk::ImageCreateInfo::builder()
             .image_type(vk::ImageType::TYPE_2D)
-            .format(COLOUR_FORMAT)
+            .format(format)
             .extent(extent)
             .mip_levels(num_storage_levels)
             .array_layers(array_layers_count)

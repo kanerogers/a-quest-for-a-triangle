@@ -14,6 +14,7 @@ mod texture;
 mod util;
 mod vulkan_context;
 mod vulkan_renderer;
+mod pipeline;
 
 mod lib {
     use crate::app::App;

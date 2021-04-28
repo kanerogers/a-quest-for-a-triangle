@@ -15,7 +15,7 @@ impl DepthBuffer {
         let format = vulkan_renderer::DEPTH_FORMAT;
         let usage = vk::ImageUsageFlags::TRANSIENT_ATTACHMENT
             | vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT;
-        let image = context.create_image(width, height, usage);
+        let image = context.create_image(width, height, format, usage);
         let aspect_mask = vk::ImageAspectFlags::DEPTH | vk::ImageAspectFlags::STENCIL;
         let view = context.create_image_view(&image, format, aspect_mask);
 
