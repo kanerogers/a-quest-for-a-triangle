@@ -132,6 +132,7 @@ impl App {
         let parms = NonNull::new(&mut parms).unwrap();
 
         let ovr_mobile = unsafe { vrapi_EnterVrMode(parms.as_ptr() as *const ovrModeParms) };
+        assert!(!ovr_mobile.is_null(), "OVR Mobile is null!");
         println!("[App] Done. Preparing for first render..");
 
         self.ovr_mobile = NonNull::new(ovr_mobile);
