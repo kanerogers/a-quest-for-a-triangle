@@ -1,8 +1,10 @@
+use align_data::{include_aligned, Align32};
 use ash::{
     version::DeviceV1_0,
     vk::{self},
     Device,
 };
+use byte_slice_cast::AsSliceOf;
 use std::ffi::CString;
 
 use crate::vulkan_context::VulkanContext;
@@ -13,8 +15,8 @@ pub fn create_graphics_pipeline(
 ) -> vk::Pipeline {
     let device = &context.device;
     let pipeline_cache = &context.pipeline_cache;
-    let vert_shader_code = include_bytes!("./shaders/shader.vert.spv");
-    let frag_shader_code = include_bytes!("./shaders/shader.frag.spv");
+    let vert_shader_code = include_aligned!(Align32, "./shaders/shader.vert.spv");
+    let frag_shader_code = include_aligned!(Align32, "./shaders/shader.frag.spv");
     let vertex_shader_module = create_shader_module(device, vert_shader_code);
     let frag_shader_module = create_shader_module(device, frag_shader_code);
     let name = CString::new("main").unwrap();
@@ -126,7 +128,7 @@ pub fn create_graphics_pipeline(
 }
 
 pub fn create_shader_module(device: &Device, bytes: &[u8]) -> vk::ShaderModule {
-    let (_, code, _) = unsafe { bytes.align_to::<u32>() };
+    let code = bytes.as_slice_of().unwrap();
     let create_info = vk::ShaderModuleCreateInfo::builder().code(code);
 
     unsafe {

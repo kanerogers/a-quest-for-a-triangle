@@ -4,6 +4,7 @@
 name = "a_quest_for_triangle"
 version = "0.1.0"
 dependencies = [
+ "align-data",
  "ash",
  "bitflags",
  "byte-slice-cast",
@@ -39,6 +40,12 @@ checksum = "7404febffaa47dac81aa44dba71523c9d069b1bdc50a77db41195149e17f68e5"
 dependencies = [
  "memchr",
 ]
+
+[[package]]
+name = "align-data"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1926655ba000b19e21f0402be09a1d52d318c8a8a68622870bfb7af2a71315cd"
 
 [[package]]
 name = "ash"

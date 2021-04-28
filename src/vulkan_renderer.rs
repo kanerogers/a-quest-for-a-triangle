@@ -126,6 +126,9 @@ impl VulkanRenderer {
         }
 
         layer.HeadPose = tracking.HeadPose;
+        let mut blackLayer = vrapi_DefaultLayerBlackProjection2();
+        blackLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER as u32;
+
         let layers = [&layer.Header as *const ovrLayerHeader2];
 
         let frame_desc = ovrSubmitFrameDescription2_ {

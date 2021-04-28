@@ -36,8 +36,4 @@ impl QueueFamilyIndices {
     pub fn is_complete(&self) -> bool {
         self.graphics_family.is_some() && self.present_family.is_some()
     }
-
-    pub fn are_same(&self) -> bool {
-        self.is_complete() && self.graphics_family == self.present_family
-    }
 }

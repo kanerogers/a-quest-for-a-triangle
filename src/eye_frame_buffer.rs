@@ -30,11 +30,10 @@ impl EyeFrameBuffer {
     ) -> Self {
         println!("[EyeFrameBuffer] Creating FrameBuffer..");
         let eye_texture_swap_chain_length = eye_texture_swap_chain.length;
-        let display_usage = TextureUsageFlags::OVR_TEXTURE_USAGE_SAMPLED;
         let display_textures = eye_texture_swap_chain
             .display_images
             .iter()
-            .map(|image| Texture::new(width, height, display_usage, image, context))
+            .map(|image| Texture::new(width, height, image, context))
             .collect::<Vec<_>>();
 
         let depth_buffer = DepthBuffer::new(width, height, context);
@@ -60,16 +59,16 @@ impl EyeFrameBuffer {
 }
 
 fn create_frame_buffer(
-    t: &Texture,
+    texture: &Texture,
     depth_buffer_view: vk::ImageView,
     render_pass: &RenderPass,
     context: &VulkanContext,
 ) -> vk::Framebuffer {
-    let attachments = [t.view, depth_buffer_view];
+    let attachments = [texture.view, depth_buffer_view];
     let create_info = vk::FramebufferCreateInfo::builder()
         .attachments(&attachments)
-        .width(t.width as u32)
-        .height(t.height as u32)
+        .width(texture.width as u32)
+        .height(texture.height as u32)
         .layers(1)
         .render_pass(render_pass.render_pass);
 

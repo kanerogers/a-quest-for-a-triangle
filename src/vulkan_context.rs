@@ -3,6 +3,7 @@ use crate::{
     device::create_logical_device,
     physical_device::get_physical_device,
     util::cstrings_to_raw,
+    vulkan_renderer::COLOUR_FORMAT,
 };
 use ash::{
     version::{DeviceV1_0, EntryV1_0, InstanceV1_0},
@@ -98,6 +99,8 @@ impl VulkanContext {
             .dst_access_mask(dst_access_mask)
             .old_layout(old_layout)
             .new_layout(new_layout)
+            .src_queue_family_index(vk::QUEUE_FAMILY_IGNORED)
+            .dst_queue_family_index(vk::QUEUE_FAMILY_IGNORED)
             .image(*image)
             .subresource_range(subresource_range)
             .build();
@@ -188,17 +191,14 @@ impl VulkanContext {
         format: vk::Format,
         aspect_mask: vk::ImageAspectFlags,
     ) -> vk::ImageView {
-        let components = vk::ComponentMapping::builder()
-            .r(vk::ComponentSwizzle::R)
-            .g(vk::ComponentSwizzle::G)
-            .b(vk::ComponentSwizzle::B)
-            .a(vk::ComponentSwizzle::A)
-            .build();
+        let components = get_components(format);
 
         let subresource_range = vk::ImageSubresourceRange::builder()
             .aspect_mask(aspect_mask)
+            .base_mip_level(0)
             .level_count(1)
             .layer_count(1)
+            .base_array_layer(0)
             .build();
 
         let create_info = vk::ImageViewCreateInfo::builder()
@@ -287,6 +287,24 @@ impl VulkanContext {
             self.device
                 .free_command_buffers(self.command_pool, command_buffers)
         };
+    }
+}
+
+fn get_components(format: vk::Format) -> vk::ComponentMapping {
+    if format == COLOUR_FORMAT {
+        vk::ComponentMapping::builder()
+            .r(vk::ComponentSwizzle::R)
+            .g(vk::ComponentSwizzle::G)
+            .b(vk::ComponentSwizzle::B)
+            .a(vk::ComponentSwizzle::A)
+            .build()
+    } else {
+        vk::ComponentMapping::builder()
+            .r(vk::ComponentSwizzle::IDENTITY)
+            .g(vk::ComponentSwizzle::IDENTITY)
+            .b(vk::ComponentSwizzle::IDENTITY)
+            .a(vk::ComponentSwizzle::IDENTITY)
+            .build()
     }
 }
 

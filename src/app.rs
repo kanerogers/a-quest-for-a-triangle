@@ -1,16 +1,14 @@
 use ash::vk::Handle;
 use ndk::looper::{Poll, ThreadLooper};
-use ovr_mobile_sys::vrapi_SetPerfThread;
 use ovr_mobile_sys::{
     ovrEventDataBuffer, ovrEventHeader_, ovrEventType, ovrJava, ovrMobile, ovrModeFlags,
-    ovrModeParms, ovrModeParmsVulkan, ovrPerfThreadType_::VRAPI_PERF_THREAD_TYPE_MAIN,
-    ovrStructureType_::VRAPI_STRUCTURE_TYPE_MODE_PARMS_VULKAN, ovrSuccessResult_,
-    vrapi_DestroySystemVulkan, vrapi_EnterVrMode, vrapi_LeaveVrMode, vrapi_PollEvent,
-    vrapi_Shutdown,
+    ovrModeParms, ovrModeParmsVulkan,
+    ovrPerfThreadType_::{VRAPI_PERF_THREAD_TYPE_MAIN, VRAPI_PERF_THREAD_TYPE_RENDERER},
+    ovrStructureType_::VRAPI_STRUCTURE_TYPE_MODE_PARMS_VULKAN,
+    ovrSuccessResult_, vrapi_DestroySystemVulkan, vrapi_EnterVrMode, vrapi_LeaveVrMode,
+    vrapi_PollEvent, vrapi_SetPerfThread, vrapi_Shutdown,
 };
-use std::mem::MaybeUninit;
-use std::ptr::NonNull;
-use std::time::Duration;
+use std::{mem::MaybeUninit, process, ptr::NonNull, time::Duration};
 
 use crate::vulkan_renderer::VulkanRenderer;
 
@@ -137,7 +135,10 @@ impl App {
         assert!(!ovr_mobile.is_null(), "OVR Mobile is null!");
         println!("[App] Done. Preparing for first render..");
 
-        unsafe { vrapi_SetPerfThread(ovr_mobile, VRAPI_PERF_THREAD_TYPE_MAIN, 0) };
+        let pid = process::id();
+
+        unsafe { vrapi_SetPerfThread(ovr_mobile, VRAPI_PERF_THREAD_TYPE_MAIN, pid) };
+        unsafe { vrapi_SetPerfThread(ovr_mobile, VRAPI_PERF_THREAD_TYPE_RENDERER, 0) };
 
         self.ovr_mobile = NonNull::new(ovr_mobile);
     }

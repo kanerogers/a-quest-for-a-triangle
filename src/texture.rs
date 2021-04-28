@@ -38,8 +38,6 @@ pub struct Texture {
     pub depth: i32,
     pub mip_count: i32,
     pub sample_count: vk::SampleCountFlags,
-    pub usage: TextureUsageFlags,
-    pub usage_flags: TextureUsageFlags,
     pub wrap_mode: TextureWrapMode,
     pub filter: TextureFilter,
     pub max_anisotropy: f32,
@@ -51,31 +49,13 @@ pub struct Texture {
 }
 
 impl Texture {
-    pub fn new(
-        width: i32,
-        height: i32,
-        usage: TextureUsageFlags,
-        image: &vk::Image,
-        context: &VulkanContext,
-    ) -> Self {
+    pub fn new(width: i32, height: i32, image: &vk::Image, context: &VulkanContext) -> Self {
         println!("[Texture] Creating texture for {:?}", image);
         // Get the appropriate image layout for this texture.
-        let image_layout = if usage == TextureUsageFlags::OVR_TEXTURE_USAGE_FRAG_DENSITY {
-            vk::ImageLayout::FRAGMENT_DENSITY_MAP_OPTIMAL_EXT
-        } else {
-            vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL
-        };
-
-        // Change the image layout to the most optimal for this kind of texture.
-        // dst_flags are different between different texture types
-        let dst_flags = if usage == TextureUsageFlags::OVR_TEXTURE_USAGE_FRAG_DENSITY {
-            vk::AccessFlags::FRAGMENT_DENSITY_MAP_READ_EXT
-        } else {
-            vk::AccessFlags::SHADER_READ
-        };
-        let aspect_mask = vk::ImageAspectFlags::COLOR;
         let src_flags = vk::AccessFlags::empty();
+        let dst_flags = vk::AccessFlags::SHADER_READ;
         let old_layout = vk::ImageLayout::UNDEFINED;
+        let new_layout = vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL;
         let start_stage = vk::PipelineStageFlags::TOP_OF_PIPE;
         let end_stage = vk::PipelineStageFlags::ALL_GRAPHICS;
         let setup_command_buffer = context.create_setup_command_buffer();
@@ -86,7 +66,7 @@ impl Texture {
             src_flags,
             dst_flags,
             old_layout,
-            image_layout,
+            new_layout,
             start_stage,
             end_stage,
         );
@@ -95,6 +75,7 @@ impl Texture {
 
         // Great! Now create an image view.
         let format = vulkan_renderer::COLOUR_FORMAT;
+        let aspect_mask = vk::ImageAspectFlags::COLOR;
         let view = context.create_image_view(image, format, aspect_mask);
         let sampler;
         let mip_count = 1;
@@ -114,14 +95,10 @@ impl Texture {
             depth: 1,
             mip_count,
             sample_count: vk::SampleCountFlags::TYPE_1,
-            usage,
-            usage_flags: TextureUsageFlags::OVR_TEXTURE_USAGE_COLOR_ATTACHMENT
-                | TextureUsageFlags::OVR_TEXTURE_USAGE_SAMPLED
-                | TextureUsageFlags::OVR_TEXTURE_USAGE_STORAGE,
             max_anisotropy,
             wrap_mode,
             filter,
-            image_layout,
+            image_layout: new_layout,
             image: *image,
             memory,
             view,
