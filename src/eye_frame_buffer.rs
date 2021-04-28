@@ -33,16 +33,14 @@ impl EyeFrameBuffer {
     ) -> Self {
         println!("[EyeFrameBuffer] Creating FrameBuffer..");
         let eye_texture_swap_chain_length = eye_texture_swap_chain.length;
-        let format = eye_texture_swap_chain.format;
         let display_usage = TextureUsageFlags::OVR_TEXTURE_USAGE_SAMPLED;
         let display_textures = eye_texture_swap_chain
             .display_images
             .iter()
-            .map(|image| Texture::new(width, height, format, display_usage, image, context))
+            .map(|image| Texture::new(width, height, display_usage, image, context))
             .collect::<Vec<_>>();
 
-        let depth_format = render_pass.depth_format;
-        let depth_buffer = DepthBuffer::new(width, height, depth_format, context);
+        let depth_buffer = DepthBuffer::new(width, height, context);
 
         let frame_buffers = display_textures
             .iter()
@@ -58,7 +56,6 @@ impl EyeFrameBuffer {
             swapchain_handle,
             swap_chain_length: eye_texture_swap_chain_length,
             display_textures,
-            // render_texture,
             frame_buffers,
             num_layers: 2,
             current_buffer_index: 0,

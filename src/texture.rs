@@ -1,7 +1,7 @@
 use ash::{version::DeviceV1_0, vk};
 use bitflags::bitflags;
 
-use crate::vulkan_context::VulkanContext;
+use crate::{vulkan_context::VulkanContext, vulkan_renderer};
 
 bitflags! {
     pub struct TextureUsageFlags: u32 {
@@ -44,7 +44,6 @@ pub struct Texture {
     pub wrap_mode: TextureWrapMode,
     pub filter: TextureFilter,
     pub max_anisotropy: f32,
-    pub color_format: vk::Format,
     pub image_layout: vk::ImageLayout,
     pub image: vk::Image,
     pub memory: vk::DeviceMemory,
@@ -56,7 +55,6 @@ impl Texture {
     pub fn new(
         width: i32,
         height: i32,
-        color_format: vk::Format,
         usage: TextureUsageFlags,
         image: &vk::Image,
         context: &VulkanContext,
@@ -97,19 +95,15 @@ impl Texture {
         context.flush_setup_command_buffer(setup_command_buffer);
 
         // Great! Now create an image view.
-        let view = context.create_image_view(image, color_format, aspect_mask);
+        let format = vulkan_renderer::COLOUR_FORMAT;
+        let view = context.create_image_view(image, format, aspect_mask);
         let sampler;
         let mip_count = 1;
         let max_anisotropy = 1.0;
         let wrap_mode = TextureWrapMode::OvrTextureWrapModeClampToBorder;
         let filter = TextureFilter::OvrTextureFilterLinear;
 
-        // If necessary, create a sampler.
-        // if usage != TextureUsageFlags::OVR_TEXTURE_USAGE_COLOR_ATTACHMENT {
-        //     sampler = create_sampler(context, wrap_mode, filter, max_anisotropy, mip_count);
-        // } else {
-        sampler = vk::Sampler::null();
-        // }
+        sampler = create_sampler(context, wrap_mode, filter, max_anisotropy, mip_count);
 
         let memory = vk::DeviceMemory::null();
 
@@ -129,7 +123,6 @@ impl Texture {
             max_anisotropy,
             wrap_mode,
             filter,
-            color_format,
             image_layout,
             image: *image,
             memory,

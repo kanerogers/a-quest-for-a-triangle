@@ -1,10 +1,10 @@
-use std::ptr::NonNull;
-
+use crate::vulkan_renderer;
 use ash::vk::{self, Handle};
 use ovr_mobile_sys::{
-    ovrTextureSwapChain, vrapi_CreateTextureSwapChain3, vrapi_GetTextureSwapChainBufferVulkan,
-    vrapi_GetTextureSwapChainLength,
+    ovrSwapChainCreateInfo_, ovrTextureSwapChain, vrapi_CreateTextureSwapChain4,
+    vrapi_GetTextureSwapChainBufferVulkan, vrapi_GetTextureSwapChainLength,
 };
+use std::ptr::NonNull;
 
 // A wrapper around VrApi's texture SwapChain.
 // A "texture" is VrApi terminology for a Vulkan "Image", that is to say a buffer of data that is arranged
@@ -13,7 +13,6 @@ pub struct EyeTextureSwapChain {
     pub handle: NonNull<ovrTextureSwapChain>,
     pub length: i32,
     pub display_images: Vec<vk::Image>,
-    pub format: vk::Format,
 }
 
 impl EyeTextureSwapChain {
@@ -23,20 +22,23 @@ impl EyeTextureSwapChain {
         // Get required parameters for texture swapchain creation
         let levels = 1;
         let images_count = 3;
-        let format = vk::Format::R8G8B8A8_UNORM;
 
         // Create texture swapchain
         println!("[EyeTextureSwapChain] Creating texture swapchain");
 
         // This handle is an opaque type provided by VrApi.
-        let swapchain_handle = vrapi_CreateTextureSwapChain3(
-            ovr_mobile_sys::ovrTextureType::VRAPI_TEXTURE_TYPE_2D,
-            format.as_raw() as i64,
-            width,
-            height,
-            levels,
-            images_count,
-        );
+        let create_info = ovrSwapChainCreateInfo_ {
+            Format: vulkan_renderer::COLOUR_FORMAT.as_raw() as i64,
+            Width: width,
+            Height: height,
+            Levels: levels,
+            FaceCount: 1,
+            ArraySize: 1,
+            BufferCount: images_count,
+            CreateFlags: 0,
+            UsageFlags: 0 | 0x1,
+        };
+        let swapchain_handle = vrapi_CreateTextureSwapChain4(&create_info);
 
         println!("[EyeTextureSwapChain] done!");
 
@@ -59,7 +61,6 @@ impl EyeTextureSwapChain {
         let handle = NonNull::new(swapchain_handle).unwrap();
 
         EyeTextureSwapChain {
-            format,
             handle,
             length: swapchain_length,
             display_images,

@@ -1,10 +1,9 @@
 use ash::vk;
 
-use crate::vulkan_context::VulkanContext;
+use crate::{vulkan_context::VulkanContext, vulkan_renderer};
 
 #[derive(Debug, Clone, Copy)]
 pub struct DepthBuffer {
-    pub format: vk::Format,
     pub layout: vk::ImageLayout,
     pub image: vk::Image,
     pub memory: vk::DeviceMemory,
@@ -12,10 +11,11 @@ pub struct DepthBuffer {
 }
 
 impl DepthBuffer {
-    pub fn new(width: i32, height: i32, format: vk::Format, context: &VulkanContext) -> Self {
+    pub fn new(width: i32, height: i32, context: &VulkanContext) -> Self {
+        let format = vulkan_renderer::DEPTH_FORMAT;
         let usage = vk::ImageUsageFlags::TRANSIENT_ATTACHMENT
             | vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT;
-        let image = context.create_image(width, height, format, usage);
+        let image = context.create_image(width, height, usage);
         let aspect_mask = vk::ImageAspectFlags::DEPTH | vk::ImageAspectFlags::STENCIL;
         let view = context.create_image_view(&image, format, aspect_mask);
 
@@ -40,7 +40,6 @@ impl DepthBuffer {
         context.flush_setup_command_buffer(setup_command_buffer);
 
         Self {
-            format,
             layout: new_layout,
             image,
             memory: vk::DeviceMemory::null(), // TODO

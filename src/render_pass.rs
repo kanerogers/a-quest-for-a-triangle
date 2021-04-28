@@ -1,21 +1,17 @@
-use crate::old_vulkan;
+use crate::vulkan_renderer;
 use ash::{version::DeviceV1_0, vk, Device};
 use ovr_mobile_sys::ovrVector4f;
 
 pub struct RenderPass {
     pub render_pass: vk::RenderPass,
     pub clear_color: ovrVector4f,
-    pub colour_format: vk::Format,
-    pub depth_format: vk::Format,
     pub sample_count: vk::SampleCountFlags,
 }
 
 impl RenderPass {
     pub fn new(device: &Device) -> Self {
-        let colour_format = vk::Format::R8G8B8A8_UNORM;
-        let depth_format = vk::Format::D24_UNORM_S8_UINT;
         let sample_count = vk::SampleCountFlags::TYPE_1;
-        let render_pass = create_render_pass(device, colour_format, depth_format, sample_count);
+        let render_pass = create_render_pass(device, sample_count);
         let clear_color = ovrVector4f {
             x: 0.125,
             y: 0.0,
@@ -26,23 +22,16 @@ impl RenderPass {
         Self {
             render_pass,
             clear_color,
-            colour_format,
-            depth_format,
             sample_count,
         }
     }
 }
 
-pub fn create_render_pass(
-    device: &Device,
-    colour_format: vk::Format,
-    depth_format: vk::Format,
-    sample_count: vk::SampleCountFlags,
-) -> vk::RenderPass {
+pub fn create_render_pass(device: &Device, sample_count: vk::SampleCountFlags) -> vk::RenderPass {
     println!("[RenderPass] Creating render pass..");
 
     let color_attachment = vk::AttachmentDescription::builder()
-        .format(colour_format)
+        .format(vulkan_renderer::COLOUR_FORMAT)
         .samples(sample_count)
         .load_op(vk::AttachmentLoadOp::CLEAR)
         .store_op(vk::AttachmentStoreOp::STORE)
@@ -57,7 +46,7 @@ pub fn create_render_pass(
         .build();
 
     let depth_stencil_attachment = vk::AttachmentDescription::builder()
-        .format(depth_format)
+        .format(vulkan_renderer::DEPTH_FORMAT)
         .samples(sample_count)
         .load_op(vk::AttachmentLoadOp::CLEAR)
         .store_op(vk::AttachmentStoreOp::DONT_CARE)
