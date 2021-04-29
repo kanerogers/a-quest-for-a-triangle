@@ -1,46 +1,12 @@
 use ash::{version::DeviceV1_0, vk};
-use bitflags::bitflags;
 
 use crate::{vulkan_context::VulkanContext, vulkan_renderer};
-
-bitflags! {
-    pub struct TextureUsageFlags: u32 {
-        const OVR_TEXTURE_USAGE_UNDEFINED = 1 << 0;
-        const OVR_TEXTURE_USAGE_GENERAL = 1 << 1;
-        const OVR_TEXTURE_USAGE_TRANSFER_SRC = 1 << 2;
-        const OVR_TEXTURE_USAGE_TRANSFER_DST = 1 << 3;
-        const OVR_TEXTURE_USAGE_SAMPLED = 1 << 4;
-        const OVR_TEXTURE_USAGE_STORAGE = 1 << 5;
-        const OVR_TEXTURE_USAGE_COLOR_ATTACHMENT = 1 << 6;
-        const OVR_TEXTURE_USAGE_PRESENTATION = 1 << 7;
-        const OVR_TEXTURE_USAGE_FRAG_DENSITY = 1 << 8;
-    }
-}
-
-#[derive(Clone, Debug, Copy, PartialEq)]
-pub enum TextureWrapMode {
-    _OvrTextureWrapModeRepeat,
-    OvrTextureWrapModeClampToEdge,
-    OvrTextureWrapModeClampToBorder,
-}
-
-#[derive(Clone, Debug, Copy, PartialEq)]
-pub enum TextureFilter {
-    OvrTextureFilterNearest,
-    OvrTextureFilterLinear,
-    _OvrTextureFilterBilinear,
-}
 
 // A texture is an image, or part of an image that will be rendered to the eyes.
 pub struct Texture {
     pub width: i32,
     pub height: i32,
     pub depth: i32,
-    pub mip_count: i32,
-    pub sample_count: vk::SampleCountFlags,
-    pub wrap_mode: TextureWrapMode,
-    pub filter: TextureFilter,
-    pub max_anisotropy: f32,
     pub image_layout: vk::ImageLayout,
     pub image: vk::Image,
     pub memory: vk::DeviceMemory,
@@ -78,12 +44,8 @@ impl Texture {
         let aspect_mask = vk::ImageAspectFlags::COLOR;
         let view = context.create_image_view(image, format, aspect_mask);
         let sampler;
-        let mip_count = 1;
-        let max_anisotropy = 1.0;
-        let wrap_mode = TextureWrapMode::OvrTextureWrapModeClampToBorder;
-        let filter = TextureFilter::OvrTextureFilterLinear;
 
-        sampler = create_sampler(context, wrap_mode, filter, max_anisotropy, mip_count);
+        sampler = create_sampler(context);
 
         let memory = vk::DeviceMemory::null();
 
@@ -93,11 +55,6 @@ impl Texture {
             width,
             height,
             depth: 1,
-            mip_count,
-            sample_count: vk::SampleCountFlags::TYPE_1,
-            max_anisotropy,
-            wrap_mode,
-            filter,
             image_layout: new_layout,
             image: *image,
             memory,
@@ -107,32 +64,10 @@ impl Texture {
     }
 }
 
-fn create_sampler(
-    context: &VulkanContext,
-    wrap_mode: TextureWrapMode,
-    filter: TextureFilter,
-    max_anisotropy: f32,
-    mip_count: i32,
-) -> vk::Sampler {
-    let mipmap_mode = if filter == TextureFilter::OvrTextureFilterNearest {
-        vk::SamplerMipmapMode::NEAREST
-    } else {
-        vk::SamplerMipmapMode::LINEAR
-    };
-
-    let address_mode = if wrap_mode == TextureWrapMode::OvrTextureWrapModeClampToEdge {
-        vk::SamplerAddressMode::CLAMP_TO_EDGE
-    } else if wrap_mode == TextureWrapMode::OvrTextureWrapModeClampToBorder {
-        vk::SamplerAddressMode::CLAMP_TO_BORDER
-    } else {
-        vk::SamplerAddressMode::REPEAT
-    };
-
-    let mag_filter = if filter == TextureFilter::OvrTextureFilterNearest {
-        vk::Filter::NEAREST
-    } else {
-        vk::Filter::LINEAR
-    };
+fn create_sampler(context: &VulkanContext) -> vk::Sampler {
+    let mipmap_mode = vk::SamplerMipmapMode::NEAREST;
+    let address_mode = vk::SamplerAddressMode::CLAMP_TO_BORDER;
+    let mag_filter = vk::Filter::LINEAR;
 
     let create_info = vk::SamplerCreateInfo::builder()
         .mag_filter(mag_filter)
@@ -141,12 +76,13 @@ fn create_sampler(
         .address_mode_u(address_mode)
         .address_mode_v(address_mode)
         .address_mode_w(address_mode)
+        .mip_lod_bias(0.0)
         .anisotropy_enable(false)
-        .max_anisotropy(max_anisotropy)
+        .max_anisotropy(1.0)
         .compare_enable(false)
         .compare_op(vk::CompareOp::NEVER)
         .min_lod(0.0)
-        .max_lod(mip_count as f32)
+        .max_lod(1.0)
         .border_color(vk::BorderColor::FLOAT_OPAQUE_BLACK)
         .unnormalized_coordinates(false);
 

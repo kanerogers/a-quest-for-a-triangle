@@ -3,11 +3,8 @@ use ovr_mobile_sys::ovrTextureSwapChain;
 use std::ptr::NonNull;
 
 use crate::{
-    depth_buffer::DepthBuffer,
-    eye_texture_swap_chain::EyeTextureSwapChain,
-    render_pass::RenderPass,
-    texture::{Texture, TextureUsageFlags},
-    vulkan_context::VulkanContext,
+    depth_buffer::DepthBuffer, eye_texture_swap_chain::EyeTextureSwapChain,
+    render_pass::RenderPass, texture::Texture, vulkan_context::VulkanContext,
 };
 
 pub struct EyeFrameBuffer {

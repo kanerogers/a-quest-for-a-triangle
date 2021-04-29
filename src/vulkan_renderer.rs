@@ -121,15 +121,13 @@ impl VulkanRenderer {
             texture.SwapChainIndex = eye_frame_buffer.current_buffer_index as i32;
             texture.TexCoordsFromTanAngles =
                 ovrMatrix4f_TanAngleMatrixFromProjection(&tracking.Eye[eye].ProjectionMatrix);
-
-            // println!("[Renderer] {} - {:?}", predicted_display_time, texture);
         }
 
         layer.HeadPose = tracking.HeadPose;
         let mut blackLayer = vrapi_DefaultLayerBlackProjection2();
         blackLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER as u32;
 
-        let layers = [&layer.Header as *const ovrLayerHeader2];
+        let layers = [&blackLayer.Header as *const ovrLayerHeader2];
 
         let frame_desc = ovrSubmitFrameDescription2_ {
             Flags: 0,
