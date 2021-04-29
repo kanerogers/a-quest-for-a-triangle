@@ -4,4 +4,4 @@
 - [x] Get Rust -> EGL working
 - [x] Enter VR mode with vrapi_EnterVrMode()
 - [x] Submit *something* to vrapi_SubmitFrame2()
-- [ ] Render that *goddamn triangle*
+- [x] Render that *goddamn triangle*
