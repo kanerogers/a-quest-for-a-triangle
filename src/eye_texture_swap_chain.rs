@@ -51,7 +51,7 @@ impl EyeTextureSwapChain {
         );
         // let swapchain_handle = vrapi_CreateTextureSwapChain4(&create_info);
 
-        println!("[EyeTextureSwapChain] done!");
+        println!("[EyeTextureSwapChain] done: {:?}", swapchain_handle);
 
         let swapchain_length = vrapi_GetTextureSwapChainLength(swapchain_handle);
         assert_eq!(images_count, swapchain_length);

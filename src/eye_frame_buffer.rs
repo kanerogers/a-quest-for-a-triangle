@@ -7,6 +7,7 @@ use crate::{
     render_pass::RenderPass, texture::Texture, vulkan_context::VulkanContext,
 };
 
+#[derive(Debug)]
 pub struct EyeFrameBuffer {
     pub width: i32,
     pub height: i32,

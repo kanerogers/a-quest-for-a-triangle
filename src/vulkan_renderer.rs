@@ -16,8 +16,8 @@ use ovr_mobile_sys::{
     ovrSystemProperty_::{
         VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH,
     },
-    vrapi_GetPredictedDisplayTime, vrapi_GetPredictedTracking2, vrapi_GetSystemPropertyInt,
-    vrapi_SubmitFrame2,
+    ovrVector4f, vrapi_GetPredictedDisplayTime, vrapi_GetPredictedTracking2,
+    vrapi_GetSystemPropertyInt, vrapi_SubmitFrame2,
 };
 use std::ptr::NonNull;
 
@@ -26,7 +26,7 @@ pub const DEPTH_FORMAT: vk::Format = vk::Format::D24_UNORM_S8_UINT;
 
 pub struct VulkanRenderer {
     pub context: VulkanContext,
-    pub current_frame: usize,
+    pub current_frame: u64,
     pub render_pass: RenderPass,
     pub eye_command_buffers: [EyeCommandBuffer; 2],
     pub eye_frame_buffers: [EyeFrameBuffer; 2],
@@ -97,11 +97,10 @@ impl VulkanRenderer {
     }
 
     pub unsafe fn render(&mut self, ovr_mobile: NonNull<ovrMobile>) -> () {
-        if self.current_frame == 0 {
-            self.render_loading_scene(ovr_mobile);
-        }
-
+        // self.render_loading_scene(ovr_mobile);
+        // return;
         self.current_frame += 1;
+
         for eye in 0..2 {
             let current_buffer_index = self.eye_frame_buffers[eye].current_buffer_index;
             self.eye_frame_buffers[eye].current_buffer_index = (current_buffer_index + 1) % 3;
@@ -115,26 +114,38 @@ impl VulkanRenderer {
 
         for eye in 0..2 {
             self.draw_frame(eye);
-            let mut texture = layer.Textures[eye];
             let eye_frame_buffer = &self.eye_frame_buffers[eye];
-            texture.ColorSwapChain = eye_frame_buffer.swapchain_handle.as_ptr();
-            texture.SwapChainIndex = eye_frame_buffer.current_buffer_index as i32;
-            texture.TexCoordsFromTanAngles =
-                ovrMatrix4f_TanAngleMatrixFromProjection(&tracking.Eye[eye].ProjectionMatrix);
+            let color_swap_chain = eye_frame_buffer.swapchain_handle.as_ptr();
+            let swap_chain_index = eye_frame_buffer.current_buffer_index as i32;
+            let texture = &mut layer.Textures[eye];
+            texture.ColorSwapChain = color_swap_chain;
+            texture.SwapChainIndex = swap_chain_index;
+            // layer.Textures[eye].TexCoordsFromTanAngles =
+            //     ovrMatrix4f_TanAngleMatrixFromProjection(&tracking.Eye[eye].ProjectionMatrix);
         }
+        println!("{:?}", layer.Textures);
 
-        layer.HeadPose = tracking.HeadPose;
-        let mut blackLayer = vrapi_DefaultLayerBlackProjection2();
-        blackLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER as u32;
+        // layer.HeadPose = tracking.HeadPose;
+        // let mut blackLayer = vrapi_DefaultLayerBlackProjection2();
+        // blackLayer.Header.ColorScale = ovrVector4f {
+        //     x: 0.0,
+        //     y: 0.0,
+        //     z: 0.5,
+        //     w: 1.0,
+        // };
+        // println!("{:?}", blackLayer.Header);
 
-        let layers = [&blackLayer.Header as *const ovrLayerHeader2];
+        let layers = [&layer.Header as *const ovrLayerHeader2];
+        // let layers = [&blackLayer.Header as *const ovrLayerHeader2];
+        // let mut frameFlags = 0;
+        // frameFlags |= VRAPI_FRAME_FLAG_FLUSH as u32;
 
         let frame_desc = ovrSubmitFrameDescription2_ {
             Flags: 0,
-            FrameIndex: self.current_frame as u64,
+            FrameIndex: self.current_frame,
             SwapInterval: 1,
             DisplayTime: predicted_display_time,
-            LayerCount: 1,
+            LayerCount: layers.len() as u32,
             Layers: layers.as_ptr(),
             Pad: std::mem::zeroed(),
         };
@@ -305,7 +316,7 @@ impl VulkanRenderer {
     }
 
     pub unsafe fn render_loading_scene(&mut self, ovr_mobile: NonNull<ovrMobile>) -> () {
-        println!("[Renderer] Rendering loading scene..");
+        // println!("[Renderer] Rendering loading scene..");
         let ovr_mobile = ovr_mobile.as_ptr();
 
         let predicted_display_time =
@@ -313,6 +324,12 @@ impl VulkanRenderer {
         let _tracking = vrapi_GetPredictedTracking2(ovr_mobile, predicted_display_time);
         let mut blackLayer = vrapi_DefaultLayerBlackProjection2();
         blackLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER as u32;
+        blackLayer.Header.ColorScale = ovrVector4f {
+            x: 0.125,
+            y: 0.125,
+            z: 0.125,
+            w: 1.0,
+        };
 
         let mut iconLayer = vrapi_DefaultLayerLoadingIcon2();
         iconLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER as u32;
@@ -327,7 +344,7 @@ impl VulkanRenderer {
 
         let frame_desc = ovrSubmitFrameDescription2_ {
             Flags: frameFlags,
-            FrameIndex: 0,
+            FrameIndex: self.current_frame,
             SwapInterval: 1,
             DisplayTime: predicted_display_time,
             LayerCount: layers.len() as u32,
@@ -338,6 +355,6 @@ impl VulkanRenderer {
         // Hand over the eye images to the time warp.
         let result = vrapi_SubmitFrame2(ovr_mobile, &frame_desc);
         assert_eq!(0, result);
-        println!("[Renderer] ..done, now rendering first real frames.");
+        // println!("[Renderer] ..done, now rendering first real frames.");
     }
 }

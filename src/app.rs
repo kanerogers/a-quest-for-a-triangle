@@ -196,7 +196,7 @@ impl App {
     }
 
     pub fn poll_vr_api_events(&mut self) -> Option<ovrEventType> {
-        let data = unsafe { MaybeUninit::uninit().assume_init() };
+        let data = unsafe { MaybeUninit::zeroed().assume_init() };
         let mut header = ovrEventHeader_ {
             EventType: ovrEventType::VRAPI_EVENT_NONE,
         };

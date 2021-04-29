@@ -3,6 +3,7 @@ use ash::{version::DeviceV1_0, vk};
 use crate::{vulkan_context::VulkanContext, vulkan_renderer};
 
 // A texture is an image, or part of an image that will be rendered to the eyes.
+#[derive(Debug)]
 pub struct Texture {
     pub width: i32,
     pub height: i32,
