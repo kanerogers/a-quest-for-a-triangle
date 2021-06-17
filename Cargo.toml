@@ -15,22 +15,34 @@ futures = "0.3"
 jni = "0.17"
 log = "0.4"
 #ovr-mobile-sys = {git = "https://github.com/kanerogers/ovr-mobile-sys"}
+align-data = "0.1.0"
+bitflags = "1.2"
 ovr-mobile-sys = {path = "../ovr-mobile-sys"}
 
 [package.metadata.android]
 apk_label = "A Quest for a Triangle"
 fullscreen = true
-libs = ["src/libs/libVkLayer_core_validation.so"]
-target_sdk_version = 26
+libs = ["src/libs/libVkLayer_khronos_validation.so"]
+target_sdk_version = 28
+
+[[package.metadata.android.feature]]
+name = "oculus.software.handtracking"
+required = true
 
 [[package.metadata.android.permission]]
 name = "android.permission.ACCESS_NETWORK_STATE"
 
-# [[package.metadata.android.activity_metadatas]]
-# name = "com.oculus.vr.focusaware"
-# value = "true"
+[[package.metadata.android.permission]]
+name = "android.permission.INTERNET"
+
+[[package.metadata.android.permission]]
+name = "oculus.permission.HAND_TRACKING"
+
+[[package.metadata.android.activity_metadatas]]
+name = "com.oculus.vr.focusaware"
+value = "true"
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.17"
-ndk = "0.2.1"
-ndk-glue = {git = "https://github.com/MarijnS95/android-ndk-rs", branch = "poll-use-identifier"}
+ndk = "0.3.0"
+ndk-glue = "0.3.0"

@@ -1,4 +1,4 @@
-use ash::{version::InstanceV1_0, vk, Entry, Instance};
+use ash::{version::InstanceV1_0, vk, Instance};
 
 #[derive(Clone, Debug)]
 pub struct QueueFamilyIndices {
@@ -10,7 +10,6 @@ impl QueueFamilyIndices {
     pub fn find_queue_families(
         instance: &Instance,
         device: vk::PhysicalDevice,
-        entry: &Entry,
     ) -> QueueFamilyIndices {
         let mut indices = QueueFamilyIndices {
             graphics_family: None,
@@ -36,9 +35,5 @@ impl QueueFamilyIndices {
 
     pub fn is_complete(&self) -> bool {
         self.graphics_family.is_some() && self.present_family.is_some()
-    }
-
-    pub fn are_same(&self) -> bool {
-        self.is_complete() && self.graphics_family == self.present_family
     }
 }

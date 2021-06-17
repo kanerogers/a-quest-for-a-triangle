@@ -4,13 +4,15 @@
 name = "a_quest_for_triangle"
 version = "0.1.0"
 dependencies = [
+ "align-data",
  "ash",
+ "bitflags",
  "byte-slice-cast",
  "env_logger",
  "futures",
  "jni",
  "log",
- "ndk 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ndk",
  "ndk-glue",
  "ovr-mobile-sys",
 ]
@@ -38,6 +40,12 @@ checksum = "7404febffaa47dac81aa44dba71523c9d069b1bdc50a77db41195149e17f68e5"
 dependencies = [
  "memchr",
 ]
+
+[[package]]
+name = "align-data"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1926655ba000b19e21f0402be09a1d52d318c8a8a68622870bfb7af2a71315cd"
 
 [[package]]
 name = "ash"
@@ -78,6 +86,12 @@ dependencies = [
  "object",
  "rustc-demangle",
 ]
+
+[[package]]
+name = "bitflags"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 
 [[package]]
 name = "byte-slice-cast"
@@ -379,44 +393,35 @@ dependencies = [
 
 [[package]]
 name = "ndk"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5eb167c1febed0a496639034d0c76b3b74263636045db5489eee52143c246e73"
+checksum = "8794322172319b972f528bf90c6b467be0079f1fa82780ffb431088e741a73ab"
 dependencies = [
  "jni-sys",
- "ndk-sys 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "num_enum",
- "thiserror",
-]
-
-[[package]]
-name = "ndk"
-version = "0.2.1"
-source = "git+https://github.com/MarijnS95/android-ndk-rs?branch=poll-use-identifier#c9074f3953c56760d170a3ef64a36d5f3e6696e8"
-dependencies = [
- "jni-sys",
- "ndk-sys 0.2.1 (git+https://github.com/MarijnS95/android-ndk-rs?branch=poll-use-identifier)",
+ "ndk-sys",
  "num_enum",
  "thiserror",
 ]
 
 [[package]]
 name = "ndk-glue"
-version = "0.2.1"
-source = "git+https://github.com/MarijnS95/android-ndk-rs?branch=poll-use-identifier#c9074f3953c56760d170a3ef64a36d5f3e6696e8"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c5caf0c24d51ac1c905c27d4eda4fa0635bbe0de596b8f79235e0b17a4d29385"
 dependencies = [
  "lazy_static",
  "libc",
  "log",
- "ndk 0.2.1 (git+https://github.com/MarijnS95/android-ndk-rs?branch=poll-use-identifier)",
+ "ndk",
  "ndk-macro",
- "ndk-sys 0.2.1 (git+https://github.com/MarijnS95/android-ndk-rs?branch=poll-use-identifier)",
+ "ndk-sys",
 ]
 
 [[package]]
 name = "ndk-macro"
 version = "0.2.0"
-source = "git+https://github.com/MarijnS95/android-ndk-rs?branch=poll-use-identifier#c9074f3953c56760d170a3ef64a36d5f3e6696e8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05d1c6307dc424d0f65b9b06e94f88248e6305726b14729fd67a5e47b2dc481d"
 dependencies = [
  "darling",
  "proc-macro-crate",
@@ -432,15 +437,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c44922cb3dbb1c70b5e5f443d63b64363a898564d739ba5198e3a9138442868d"
 
 [[package]]
-name = "ndk-sys"
-version = "0.2.1"
-source = "git+https://github.com/MarijnS95/android-ndk-rs?branch=poll-use-identifier#c9074f3953c56760d170a3ef64a36d5f3e6696e8"
-
-[[package]]
 name = "num_enum"
-version = "0.4.3"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca565a7df06f3d4b485494f25ba05da1435950f4dc263440eda7a6fa9b8e36e4"
+checksum = "226b45a5c2ac4dd696ed30fa6b94b057ad909c7b7fc2e0d0808192bced894066"
 dependencies = [
  "derivative",
  "num_enum_derive",
@@ -448,9 +448,9 @@ dependencies = [
 
 [[package]]
 name = "num_enum_derive"
-version = "0.4.3"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ffa5a33ddddfee04c0283a7653987d634e880347e96b5b2ed64de07efb59db9d"
+checksum = "1c0fd9eba1d5db0994a239e09c1be402d35622277e35468ba891aa5e3188ce7e"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",

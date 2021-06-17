@@ -1,24 +1,75 @@
+use ash::vk::Handle;
+use ndk::looper::{Poll, ThreadLooper};
 use ovr_mobile_sys::{
-    helpers::vrapi_DefaultLayerLoadingIcon2, ovrJava, ovrLayerHeader2, ovrMobile, ovrModeFlags,
-    ovrModeParms, ovrStructureType_::VRAPI_STRUCTURE_TYPE_MODE_PARMS, ovrSubmitFrameDescription2_,
-    vrapi_EnterVrMode, vrapi_GetPredictedDisplayTime, vrapi_GetPredictedTracking2,
-    vrapi_SubmitFrame2,
+    ovrEventDataBuffer, ovrEventHeader_, ovrEventType, ovrJava, ovrMobile, ovrModeFlags,
+    ovrModeParms, ovrModeParmsVulkan,
+    ovrPerfThreadType_::{VRAPI_PERF_THREAD_TYPE_MAIN, VRAPI_PERF_THREAD_TYPE_RENDERER},
+    ovrStructureType_::VRAPI_STRUCTURE_TYPE_MODE_PARMS_VULKAN,
+    ovrSuccessResult_, vrapi_DestroySystemVulkan, vrapi_EnterVrMode, vrapi_LeaveVrMode,
+    vrapi_PollEvent, vrapi_SetPerfThread, vrapi_Shutdown,
 };
+use std::{mem::MaybeUninit, process, ptr::NonNull, time::Duration};
 
 use crate::vulkan_renderer::VulkanRenderer;
+
+pub const LOOPER_ID_MAIN: u32 = 0;
+pub const LOOPER_ID_INPUT: u32 = 1;
+pub const LOOPER_TIMEOUT: Duration = Duration::from_millis(0u64);
 pub struct App {
     pub java: ovrJava,
-    pub ovr_mobile: Option<*mut ovrMobile>,
     pub destroy_requested: bool,
     pub resumed: bool,
     pub window_created: bool,
-    pub frame_index: i64,
     pub renderer: VulkanRenderer,
+    pub ovr_mobile: Option<NonNull<ovrMobile>>,
 }
 
 impl App {
-    pub fn handle_event(&mut self, event: ndk_glue::Event) -> () {
-        println!("[EVENT] Received event: {:?}", event);
+    pub fn new(java: ovrJava) -> Self {
+        let renderer = unsafe { VulkanRenderer::new(&java) };
+        Self {
+            java,
+            renderer,
+            ovr_mobile: None,
+            destroy_requested: false,
+            resumed: false,
+            window_created: false,
+        }
+    }
+
+    pub fn run(&mut self) {
+        while !self.destroy_requested {
+            loop {
+                match self.poll_android_events() {
+                    Some(event) => self.handle_android_event(event),
+                    _ => break,
+                }
+            }
+            loop {
+                match self.poll_vr_api_events() {
+                    Some(e) => self.handle_vr_api_event(e),
+                    _ => break,
+                }
+            }
+            self.next_state();
+        }
+    }
+
+    pub fn handle_vr_api_event(&mut self, event: ovrEventType) -> () {
+        println!("[VR_API_EVENTS] Received VR event {:?}", event);
+        match event {
+            ovrEventType::VRAPI_EVENT_DATA_LOST => {}
+            ovrEventType::VRAPI_EVENT_NONE => {}
+            ovrEventType::VRAPI_EVENT_VISIBILITY_GAINED => {}
+            ovrEventType::VRAPI_EVENT_VISIBILITY_LOST => {}
+            ovrEventType::VRAPI_EVENT_FOCUS_GAINED => {}
+            ovrEventType::VRAPI_EVENT_FOCUS_LOST => {}
+            ovrEventType::VRAPI_EVENT_DISPLAY_REFRESH_RATE_CHANGE => {}
+        }
+    }
+
+    pub fn handle_android_event(&mut self, event: ndk_glue::Event) -> () {
+        println!("[ANDROID_EVENT] Received event: {:?}", event);
         match event {
             ndk_glue::Event::Resume => self.resumed = true,
             ndk_glue::Event::Destroy => self.destroy_requested = true,
@@ -27,96 +78,145 @@ impl App {
             ndk_glue::Event::Pause => self.resumed = false,
             _ => {}
         }
-
-        self.next_state();
     }
 
     fn next_state(&mut self) {
-        // if self.need_to_exit_vr() {
-        //     self.exit_vr();
-        // }
-
+        if self.need_to_exit_vr() {
+            unsafe { self.exit_vr() };
+            return;
+        }
         if self.need_to_enter_vr() {
             self.enter_vr();
+            return;
         }
-
         if self.should_render() {
-            unsafe {
-                self.render();
-            }
+            unsafe { self.render() };
+            return;
         }
+        if self.destroy_requested {
+            unsafe { self.destroy() };
+            return;
+        }
+    }
+
+    fn need_to_exit_vr(&self) -> bool {
+        if self.ovr_mobile.is_none() {
+            return false;
+        };
+        !self.resumed || !self.window_created
     }
 
     fn need_to_enter_vr(&self) -> bool {
-        self.resumed && self.window_created && self.ovr_mobile.is_none()
+        if self.ovr_mobile.is_some() {
+            return false;
+        };
+        self.resumed && self.window_created
     }
 
     fn enter_vr(&mut self) {
+        println!("[App] Entering VR Mode..");
         let flags = 0u32 | ovrModeFlags::VRAPI_MODE_FLAG_NATIVE_WINDOW as u32;
-        let ovr_mode_parms = ovrModeParms {
-            Type: VRAPI_STRUCTURE_TYPE_MODE_PARMS,
+        let mode_parms = ovrModeParms {
+            Type: VRAPI_STRUCTURE_TYPE_MODE_PARMS_VULKAN,
             Flags: flags,
             Java: self.java.clone(),
             WindowSurface: ndk_glue::native_window().as_ref().unwrap().ptr().as_ptr() as u64,
-            Display: todo!(),
-            ShareContext: todo!(),
+            Display: 0,
+            ShareContext: 0,
         };
+        let queue = self.renderer.context.graphics_queue.as_raw();
+        let mut parms = ovrModeParmsVulkan {
+            ModeParms: mode_parms,
+            SynchronizationQueue: queue,
+        };
+        let parms = NonNull::new(&mut parms).unwrap();
 
-        println!("[ENTER_VR] Entering VR Mode..");
-        let ovr_mobile = unsafe { vrapi_EnterVrMode(&ovr_mode_parms) };
-        println!("[ENTER_VR] Done.");
+        let ovr_mobile = unsafe { vrapi_EnterVrMode(parms.as_ptr() as *const ovrModeParms) };
+        assert!(!ovr_mobile.is_null(), "OVR Mobile is null!");
+        println!("[App] Done. Preparing for first render..");
 
-        self.ovr_mobile = Some(ovr_mobile);
+        let pid = process::id();
+
+        unsafe { vrapi_SetPerfThread(ovr_mobile, VRAPI_PERF_THREAD_TYPE_MAIN, pid) };
+        unsafe { vrapi_SetPerfThread(ovr_mobile, VRAPI_PERF_THREAD_TYPE_RENDERER, 0) };
+
+        self.ovr_mobile = NonNull::new(ovr_mobile);
+    }
+
+    unsafe fn destroy(&mut self) {
+        println!("[App] Destroying app..");
+        vrapi_DestroySystemVulkan();
+        vrapi_Shutdown();
+        println!("[App] ..done");
+    }
+
+    unsafe fn exit_vr(&mut self) {
+        println!("[App] Exiting VR mode..");
+        let ovr_mobile = self.ovr_mobile.take().unwrap();
+        vrapi_LeaveVrMode(ovr_mobile.as_ptr());
+        println!("[App] ..done");
     }
 
     fn should_render(&self) -> bool {
-        self.resumed && self.window_created && self.ovr_mobile.is_some()
+        !self.destroy_requested && self.resumed && self.window_created && self.ovr_mobile.is_some()
     }
 
     unsafe fn render(&mut self) {
-        // Get the HMD pose, predicted for the middle of the time period during which
-        // the new eye images will be displayed. The number of frames predicted ahead
-        // depends on the pipeline depth of the engine and the synthesis rate.
-        // The better the prediction, the less black will be pulled in at the edges.
-        let predicted_display_time =
-            vrapi_GetPredictedDisplayTime(*self.ovr_mobile.as_ref().unwrap(), self.frame_index);
-        let _tracking =
-            vrapi_GetPredictedTracking2(*self.ovr_mobile.as_ref().unwrap(), predicted_display_time);
+        let ovr_mobile = self.ovr_mobile.unwrap();
+        self.renderer.render(ovr_mobile);
+    }
 
-        // Advance the simulation based on the predicted display time.
+    pub fn poll_android_events(&mut self) -> Option<ndk_glue::Event> {
+        let looper = ThreadLooper::for_thread().unwrap();
+        let result = looper.poll_all_timeout(LOOPER_TIMEOUT);
 
-        // Render eye images and setup the 'ovrSubmitFrameDescription2' using 'ovrTracking2' data.
+        match result {
+            Ok(Poll::Event { ident, .. }) => {
+                let ident = ident as u32;
+                if ident == LOOPER_ID_MAIN {
+                    ndk_glue::poll_events()
+                } else if ident == LOOPER_ID_INPUT {
+                    if let Some(input_queue) = ndk_glue::input_queue().as_ref() {
+                        while let Some(event) = input_queue.get_event() {
+                            if let Some(event) = input_queue.pre_dispatch(event) {
+                                input_queue.finish_event(event, false);
+                            }
+                        }
+                    }
+                    None
+                } else {
+                    unreachable!(
+                        "Unrecognised looper identifier: {:?} but LOOPER_ID_INPUT is {:?}",
+                        ident, LOOPER_ID_INPUT
+                    );
+                }
+            }
+            _ => None,
+        }
+    }
 
-        let layer = vrapi_DefaultLayerLoadingIcon2();
-        // layer.HeadPose = tracking.HeadPose;
-        // for eye in 0..2 {
-        //     let colorTextureSwapChainIndex = self.frame_index as i32
-        //         % vrapi_GetTextureSwapChainLength(self.color_texture_swap_chain[eye]);
-        //     let textureId = vrapi_GetTextureSwapChainHandle(
-        //         self.color_texture_swap_chain[eye],
-        //         colorTextureSwapChainIndex,
-        //     );
-        //     //     // Render to 'textureId' using the 'ProjectionMatrix' from 'ovrTracking2'.
-
-        //     layer.Textures[eye].ColorSwapChain = self.color_texture_swap_chain[eye];
-        //     layer.Textures[eye].SwapChainIndex = colorTextureSwapChainIndex;
-        //     layer.Textures[eye].TexCoordsFromTanAngles =
-        //         ovrMatrix4f_TanAngleMatrixFromProjection(&tracking.Eye[eye].ProjectionMatrix);
-        // }
-
-        let layers = [&layer.Header as *const ovrLayerHeader2];
-
-        let frame_desc = ovrSubmitFrameDescription2_ {
-            Flags: 0,
-            SwapInterval: 1,
-            FrameIndex: self.frame_index as u64,
-            Pad: std::mem::zeroed(),
-            DisplayTime: predicted_display_time,
-            LayerCount: 1,
-            Layers: layers.as_ptr(),
+    pub fn poll_vr_api_events(&mut self) -> Option<ovrEventType> {
+        let data = unsafe { MaybeUninit::zeroed().assume_init() };
+        let mut header = ovrEventHeader_ {
+            EventType: ovrEventType::VRAPI_EVENT_NONE,
         };
 
-        // Hand over the eye images to the time warp.
-        vrapi_SubmitFrame2(*self.ovr_mobile.as_ref().unwrap(), &frame_desc);
+        let _event_data_buffer = ovrEventDataBuffer {
+            EventHeader: header,
+            EventData: data,
+        };
+
+        let pointer = NonNull::new(&mut header).unwrap();
+
+        let result = unsafe { vrapi_PollEvent(pointer.as_ptr()) };
+        if result != ovrSuccessResult_::ovrSuccess as i32 {
+            return None;
+        }
+
+        if header.EventType == ovrEventType::VRAPI_EVENT_NONE {
+            return None;
+        }
+
+        return Some(header.EventType);
     }
 }
